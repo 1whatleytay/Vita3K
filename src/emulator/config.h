@@ -31,7 +31,7 @@ namespace config {
   * \param output_path The location to save the configuration file.
   * \return Success on saving the config file, otherwise Error.
  */
-ExitCode serialize(Config &cfg, fs::path output_path);
+ExitCode serialize(Config &cfg, Radical::Path output_path);
 
 /**
   * \brief Initializes config system, parsing command-line args and handling some basic ones:

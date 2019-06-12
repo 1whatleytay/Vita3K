@@ -67,19 +67,16 @@ constexpr int SYS_LANG_COUNT = IM_ARRAYSIZE(LIST_SYS_LANG);
 } // namespace list
 
 bool change_pref_location(const std::string &input_path, const std::string &current_path) {
-    if (fs::path(input_path).has_extension())
+    if (Radical::Path(input_path).hasExtension())
         return false;
 
-    if (!fs::exists(input_path))
-        fs::create_directories(input_path);
+    if (!Radical::Path(input_path).exists())
+        Radical::Path(input_path).createDirectories();
 
     try {
-        fs::directory_iterator it{ current_path };
-        while (it != fs::directory_iterator{}) {
+        std::vector<Radical::Path> it = Radical::Path(current_path).getContents();
+        for (Radical::Path path : it) {
             // TODO: Move Vita directories
-
-            boost::system::error_code err;
-            it.increment(err);
         }
     } catch (const std::exception &err) {
         return false;
@@ -97,7 +94,7 @@ void draw_settings_dialog(HostState &host) {
     // Core
     if (ImGui::BeginTabItem("Core")) {
         ImGui::PopStyleColor();
-        if (fs::exists(host.pref_path + "vs0/sys/external")) {
+        if ((Radical::Path(host.pref_path) / "vs0/sys/external").exists()) {
             ImGui::Text("Module List");
             if (ImGui::IsItemHovered())
                 ImGui::SetTooltip("Select your desired modules.");

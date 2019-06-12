@@ -362,12 +362,12 @@ SceUID load_self(Ptr<const void> &entry_point, KernelState &kernel, MemState &me
 
         auto dump_segment = [&](const uint8_t *const seg_data) {
             constexpr auto DUMP_DIR = "seg_dump";
-            fs::create_directory(DUMP_DIR);
+            Radical::Path(DUMP_DIR).createDirectory();
 
-            const auto filename = fs::path(fmt::format("{}/{}_seg{}_{}", DUMP_DIR, fs::path(self_path).filename().stem().string(),
+            const auto filename = Radical::Path(fmt::format("{}/{}_seg{}_{}", DUMP_DIR, Radical::Path(self_path).getStem(),
                 seg_index, get_seg_header_string()));
 
-            std::ofstream out(filename.string(), std::ios::out | std::ios::binary);
+            std::ofstream out(filename.get(), std::ios::out | std::ios::binary);
             out.write((char *)seg_data, seg_header.p_filesz);
         };
 

@@ -31,14 +31,14 @@
 
 namespace logging {
 
-static const fs::path &LOG_FILE_NAME = "vita3k.log";
+static const Radical::Path &LOG_FILE_NAME = Radical::Path("vita3k.log");
 static const char *LOG_PATTERN = "%^[%H:%M:%S.%e] |%L| [%!]: %v%$";
 std::vector<spdlog::sink_ptr> sinks;
 
 ExitCode init(const Root &root_paths) {
     sinks.push_back(std::make_shared<spdlog::sinks::stdout_color_sink_mt>());
 
-    if (add_sink(root_paths.get_base_path_string() / LOG_FILE_NAME) != Success)
+    if (add_sink(root_paths.get_base_path() / LOG_FILE_NAME) != Success)
         return InitConfigFailed;
 
     spdlog::set_error_handler([](const std::string &msg) {
@@ -53,12 +53,12 @@ void set_level(spdlog::level::level_enum log_level) {
     spdlog::set_level(log_level);
 }
 
-ExitCode add_sink(const fs::path &log_path) {
+ExitCode add_sink(const Radical::Path &log_path) {
     try {
 #ifdef WIN32
         sinks.push_back(std::make_shared<spdlog::sinks::basic_file_sink_mt>(log_path.generic_path().wstring(), true));
 #else
-        sinks.push_back(std::make_shared<spdlog::sinks::basic_file_sink_mt>(log_path.generic_path().string(), true));
+        sinks.push_back(std::make_shared<spdlog::sinks::basic_file_sink_mt>(log_path.get(), true));
 #endif
     } catch (const spdlog::spdlog_ex &ex) {
         std::cerr << "File log initialization failed: " << ex.what() << std::endl;

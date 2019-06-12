@@ -121,19 +121,19 @@ static void init_font(HostState &host) {
     const auto FONT_FILENAME = "mplus-1mn-bold.ttf";
 
     // set up font paths
-    fs::path font_dir = fs::path(host.base_path) /= fs::path(DATA_DIRNAME) /= FONT_DIRNAME;
-    fs::path font_path(fs::absolute(font_dir /= FONT_FILENAME));
+    Radical::Path font_dir = Radical::Path(host.base_path) / Radical::Path(DATA_DIRNAME) / FONT_DIRNAME;
+    Radical::Path font_path((font_dir / FONT_FILENAME).getRealPath());
 
     // check existence of font file
-    if (!fs::exists(font_path)) {
-        LOG_WARN("Could not find font file at \"{}\", falling back to default imgui font.", font_path.string());
+    if (!font_path.exists()) {
+        LOG_WARN("Could not find font file at \"{}\", falling back to default imgui font.", font_path.get());
         return;
     }
 
     // read font
-    const auto font_file_size = fs::file_size(font_path);
+    const auto font_file_size = font_path.getFileSize();
     host.gui.font_data.resize(font_file_size);
-    std::ifstream font_stream(font_path.string().c_str(), std::ios::in | std::ios::binary);
+    std::ifstream font_stream(font_path.get().c_str(), std::ios::in | std::ios::binary);
     font_stream.read(host.gui.font_data.data(), font_file_size);
 
     // add it to imgui
@@ -144,7 +144,7 @@ static void init_font(HostState &host) {
 }
 
 void init_background(HostState &host, const std::string &image_path) {
-    if (!fs::exists(image_path)) {
+    if (!Radical::Path(image_path).exists()) {
         LOG_WARN("Image doesn't exist: {}.", image_path);
         return;
     }
@@ -171,7 +171,7 @@ static void init_icons(HostState &host) {
         const std::string default_icon = "data/image/icon.png";
 
         vfs::read_app_file(buffer, host.pref_path, game.title_id, "sce_sys/icon0.png");
-        if (buffer.empty() && fs::exists(default_icon)) {
+        if (buffer.empty() && Radical::Path(default_icon).exists()) {
             LOG_INFO("Default icon found for title {}, {}.", game.title_id, game.title);
             std::ifstream image_stream(default_icon, std::ios::binary | std::ios::ate);
             const std::size_t fsize = image_stream.tellg();

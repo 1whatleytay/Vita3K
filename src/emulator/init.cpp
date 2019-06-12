@@ -96,15 +96,15 @@ void update_viewport(HostState &state) {
 }
 
 void get_game_titles(HostState &host) {
-    fs::path app_path{ fs::path{ host.pref_path } / "ux0/app" };
-    if (!fs::exists(app_path))
+    Radical::Path app_path{ Radical::Path{ host.pref_path } / "ux0/app" };
+    if (!app_path.exists())
         return;
 
-    fs::directory_iterator it{ app_path };
-    while (it != fs::directory_iterator{}) {
-        if (!it->path().empty() && !it->path().filename_is_dot() && !it->path().filename_is_dot_dot()) {
+    std::vector<Radical::Path> it = app_path.getContents();
+    for (const Radical::Path &path : it) {
+        if (!path.empty() && path.get() != "." && path.get() != "..") {
             vfs::FileBuffer params;
-            host.io.title_id = it->path().stem().generic_string();
+            host.io.title_id = path.getStem();
             if (vfs::read_app_file(params, host.pref_path, host.io.title_id, "sce_sys/param.sfo")) {
                 SfoFile sfo_handle;
                 load_sfo(sfo_handle, params);
@@ -117,8 +117,6 @@ void get_game_titles(HostState &host) {
             }
             host.gui.game_selector.games.push_back({ host.game_version, host.game_title, host.io.title_id });
         }
-        boost::system::error_code er;
-        it.increment(er);
     }
 }
 
@@ -146,7 +144,7 @@ bool init(HostState &state, Config cfg, const Root &root_paths) {
 
     state.cfg = std::move(cfg);
     if (state.cfg.wait_for_debugger) {
-        state.kernel.wait_for_debugger = state.cfg.wait_for_debugger.value();
+        state.kernel.wait_for_debugger = state.cfg.wait_for_debugger.getValue();
     }
     state.base_path = root_paths.get_base_path_string();
 

@@ -20,17 +20,14 @@
 #include <host/version.h>
 #include <psp2/system_param.h>
 #include <util/log.h>
+#include <util/optional.h>
 #include <util/string_utils.h>
 
-#include <boost/optional/optional_io.hpp>
-#include <boost/program_options.hpp>
 #include <spdlog/spdlog.h>
 #include <yaml-cpp/yaml.h>
 
 #include <exception>
 #include <iostream>
-
-namespace po = boost::program_options;
 
 namespace config {
 
@@ -44,7 +41,7 @@ void get_yaml_value(YAML::Node &config_node, const char *key, T *target_val, Q d
 }
 
 template <typename T>
-void get_yaml_value_optional(YAML::Node &config_node, const char *key, boost::optional<T> *target_val, T default_val) {
+void get_yaml_value_optional(YAML::Node &config_node, const char *key, Optional<T> *target_val, T default_val) {
     try {
         *target_val = config_node[key].as<T>();
     } catch (...) {
@@ -53,11 +50,11 @@ void get_yaml_value_optional(YAML::Node &config_node, const char *key, boost::op
 }
 
 template <typename T>
-void get_yaml_value_optional(YAML::Node &config_node, const char *key, boost::optional<T> *target_val) {
+void get_yaml_value_optional(YAML::Node &config_node, const char *key, Optional<T> *target_val) {
     try {
         *target_val = config_node[key].as<T>();
     } catch (...) {
-        *target_val = boost::none;
+        *target_val = Optional<T>();
     }
 }
 
@@ -67,9 +64,9 @@ void config_file_emit_single(YAML::Emitter &emitter, const char *name, T &val) {
 }
 
 template <typename T>
-void config_file_emit_optional_single(YAML::Emitter &emitter, const char *name, boost::optional<T> &val) {
+void config_file_emit_optional_single(YAML::Emitter &emitter, const char *name, Optional<T> &val) {
     if (val) {
-        config_file_emit_single(emitter, name, val.value());
+        config_file_emit_single(emitter, name, val.getValue());
     }
 }
 
@@ -84,22 +81,22 @@ void config_file_emit_vector(YAML::Emitter &emitter, const char *name, std::vect
     emitter << YAML::EndSeq;
 }
 
-fs::path check_path(fs::path output_path) {
-    if (output_path.filename() != "config.yml") {
-        if (!output_path.has_extension()) // assume it is a folder
-            output_path /= "config.yml";
-        else if (output_path.extension() != ".yml")
+Radical::Path check_path(Radical::Path output_path) {
+    if (output_path.getName() != "config.yml") {
+        if (!output_path.hasExtension()) // assume it is a folder
+            output_path = output_path / "config.yml";
+        else if (output_path.getExtension() != ".yml")
             return "";
     }
     return output_path;
 }
 
-ExitCode serialize(Config &cfg, fs::path output_path) {
+ExitCode serialize(Config &cfg, Radical::Path output_path) {
     output_path = check_path(output_path);
     if (output_path.empty())
         return InvalidApplicationPath;
-    if (!fs::exists(output_path.parent_path()))
-        fs::create_directories(output_path.parent_path());
+    if (!output_path.getBasePath().exists())
+        output_path.getBasePath().createDirectories();
 
     YAML::Emitter emitter;
     emitter << YAML::BeginMap;
@@ -126,7 +123,7 @@ ExitCode serialize(Config &cfg, fs::path output_path) {
 
     emitter << YAML::EndMap;
 
-    fs::ofstream fo(output_path);
+    std::ofstream fo(output_path.get());
     if (!fo) {
         return InvalidApplicationPath;
     }
@@ -135,16 +132,16 @@ ExitCode serialize(Config &cfg, fs::path output_path) {
     return Success;
 }
 
-static ExitCode parse(Config &cfg, fs::path load_path, const std::string &root_pref_path) {
+static ExitCode parse(Config &cfg, Radical::Path load_path, const std::string &root_pref_path) {
     load_path = check_path(load_path);
-    if (load_path.empty() || !fs::exists(load_path)) {
+    if (load_path.empty() || !load_path.exists()) {
         LOG_ERROR("Config file input path invalid (did you make sure to name the extension \".yml\"?)");
         return FileNotFound;
     }
 
     YAML::Node config_node;
     try {
-        config_node = YAML::LoadFile(load_path.generic_path().string());
+        config_node = YAML::LoadFile(load_path.get());
     } catch (YAML::Exception &exception) {
         std::cerr << "Config file can't be loaded: Error: " << exception.what() << "\n";
         return FileNotFound;
@@ -169,7 +166,7 @@ static ExitCode parse(Config &cfg, fs::path load_path, const std::string &root_p
     get_yaml_value(config_node, "pref-path", &cfg.pref_path, root_pref_path);
     get_yaml_value_optional(config_node, "wait-for-debugger", &cfg.wait_for_debugger);
 
-    if (!fs::exists(cfg.pref_path) && !cfg.pref_path.empty()) {
+    if (!Radical::Path(cfg.pref_path).exists() && !cfg.pref_path.empty()) {
         LOG_ERROR("Cannot find preference path: {}", cfg.pref_path);
         return InvalidApplicationPath;
     }
@@ -191,72 +188,72 @@ static ExitCode parse(Config &cfg, fs::path load_path, const std::string &root_p
 
 ExitCode init(Config &cfg, int argc, char **argv, const Root &root_paths) {
     // Load base path configuration by default
-    if (fs::exists(check_path(root_paths.get_base_path())))
+    if (check_path(root_paths.get_base_path()).exists())
         parse(cfg, root_paths.get_base_path(), root_paths.get_pref_path_string());
 
     try {
         // Declare all options
         // clang-format off
-        po::options_description generic_desc("Generic");
-        generic_desc.add_options()
-            ("help,h", "print this usage message")
-            ("version,v", "print version string");
+//        po::options_description generic_desc("Generic");
+//        generic_desc.add_options()
+//            ("help,h", "print this usage message")
+//            ("version,v", "print version string");
+//
+//        po::options_description input_desc("Input");
+//        input_desc.add_options()
+//            ("input-vpk-path,i", po::value(&cfg.vpk_path), "path of app in .vpk format to install & run")
+//            ("input-installed-id,r", po::value(&cfg.run_title_id), "title ID of installed app to run")
+//            ("recompile-shader,s", po::value(&cfg.recompile_shader_path), "Recompile the given PS Vita shader (GXP format) to SPIR-V / GLSL and quit");
+//
+//        po::options_description config_desc("Configuration");
+//        config_desc.add_options()
+//            ("archive-log,A", po::bool_switch(&cfg.archive_log), "Makes a duplicate of the log file with TITLE_ID and Game ID as title")
+//            ("config-location,c", po::value<Radical::Path>(&cfg.config_path), "Get a configuration file from a given location. If a filename is given, it must end with \".yml\", otherwise it will be assumed to be a directory. \nDefault: <Vita3K folder>/config.yml")
+//            ("keep-config,w", po::bool_switch(&cfg.overwrite_config)->default_value(true), "Do not modify the configuration file after loading.")
+//            ("load-config,f", po::bool_switch(&cfg.load_config), "Load a configuration file. Setting --keep-config with this option preserves the configuration file.")
+//            ("lle-modules,m", po::value<std::string>(), "Load given (decrypted) OS modules from disk. Separate by commas to specify multiple modules (no spaces). Full path and extension should not be included, the following are assumed: vs0:sys/external/<name>.suprx\nExample: --lle-modules libscemp4,libngs")
+//            ("log-level,l", po::value(&cfg.log_level), "logging level:\nTRACE = 0\nDEBUG = 1\nINFO = 2\nWARN = 3\nERROR = 4\nCRITICAL = 5\nOFF = 6")
+//            ("log-imports,I", po::bool_switch(&cfg.log_imports), "Log Imports")
+//            ("log-exports,E", po::bool_switch(&cfg.log_exports), "Log Exports")
+//            ("log-active-shaders,S", po::bool_switch(&cfg.log_active_shaders), "Log Active Shaders")
+//            ("log-uniforms,U", po::bool_switch(&cfg.log_uniforms), "Log Uniforms")
+//            ("sync-rendering,R", po::bool_switch(&cfg.sync_rendering), "Sync Rendering");
+//        // clang-format on
+//
+//        // Positional args
+//        // Make .vpk (-i) argument the default
+//        po::positional_options_description positional;
+//        positional.add("input-vpk-path", 1);
+//
+//        // Options description instance which includes all the options
+//        po::options_description all("All options");
+//        all.add(generic_desc).add(input_desc).add(config_desc);
+//
+//        // Options description instance which will be shown to the user
+//        po::options_description visible("Allowed options");
+//        visible.add(generic_desc).add(input_desc).add(config_desc);
+//
+//        // Options description instance which includes options exposed in config file
+//        po::options_description config_file("Config file options");
+//        config_file.add(config_desc);
+//
+//        // Command-line argument parsing
+//        po::variables_map var_map;
+//        po::store(po::command_line_parser(argc, argv).options(all).positional(positional).run(), var_map);
+//        po::notify(var_map);
+//
+//        if (var_map.count("help")) {
+//            std::cout << visible << std::endl;
+//            return QuitRequested;
+//        }
+//        if (var_map.count("version")) {
+//            std::cout << window_title << std::endl;
+//            return QuitRequested;
+//        }
+//        if (var_map.count("recompile-shader"))
+//            return QuitRequested;
 
-        po::options_description input_desc("Input");
-        input_desc.add_options()
-            ("input-vpk-path,i", po::value(&cfg.vpk_path), "path of app in .vpk format to install & run")
-            ("input-installed-id,r", po::value(&cfg.run_title_id), "title ID of installed app to run")
-            ("recompile-shader,s", po::value(&cfg.recompile_shader_path), "Recompile the given PS Vita shader (GXP format) to SPIR-V / GLSL and quit");
-
-        po::options_description config_desc("Configuration");
-        config_desc.add_options()
-            ("archive-log,A", po::bool_switch(&cfg.archive_log), "Makes a duplicate of the log file with TITLE_ID and Game ID as title")
-            ("config-location,c", po::value<fs::path>(&cfg.config_path), "Get a configuration file from a given location. If a filename is given, it must end with \".yml\", otherwise it will be assumed to be a directory. \nDefault: <Vita3K folder>/config.yml")
-            ("keep-config,w", po::bool_switch(&cfg.overwrite_config)->default_value(true), "Do not modify the configuration file after loading.")
-            ("load-config,f", po::bool_switch(&cfg.load_config), "Load a configuration file. Setting --keep-config with this option preserves the configuration file.")
-            ("lle-modules,m", po::value<std::string>(), "Load given (decrypted) OS modules from disk. Separate by commas to specify multiple modules (no spaces). Full path and extension should not be included, the following are assumed: vs0:sys/external/<name>.suprx\nExample: --lle-modules libscemp4,libngs")
-            ("log-level,l", po::value(&cfg.log_level), "logging level:\nTRACE = 0\nDEBUG = 1\nINFO = 2\nWARN = 3\nERROR = 4\nCRITICAL = 5\nOFF = 6")
-            ("log-imports,I", po::bool_switch(&cfg.log_imports), "Log Imports")
-            ("log-exports,E", po::bool_switch(&cfg.log_exports), "Log Exports")
-            ("log-active-shaders,S", po::bool_switch(&cfg.log_active_shaders), "Log Active Shaders")
-            ("log-uniforms,U", po::bool_switch(&cfg.log_uniforms), "Log Uniforms")
-            ("sync-rendering,R", po::bool_switch(&cfg.sync_rendering), "Sync Rendering");
-        // clang-format on
-
-        // Positional args
-        // Make .vpk (-i) argument the default
-        po::positional_options_description positional;
-        positional.add("input-vpk-path", 1);
-
-        // Options description instance which includes all the options
-        po::options_description all("All options");
-        all.add(generic_desc).add(input_desc).add(config_desc);
-
-        // Options description instance which will be shown to the user
-        po::options_description visible("Allowed options");
-        visible.add(generic_desc).add(input_desc).add(config_desc);
-
-        // Options description instance which includes options exposed in config file
-        po::options_description config_file("Config file options");
-        config_file.add(config_desc);
-
-        // Command-line argument parsing
-        po::variables_map var_map;
-        po::store(po::command_line_parser(argc, argv).options(all).positional(positional).run(), var_map);
-        po::notify(var_map);
-
-        if (var_map.count("help")) {
-            std::cout << visible << std::endl;
-            return QuitRequested;
-        }
-        if (var_map.count("version")) {
-            std::cout << window_title << std::endl;
-            return QuitRequested;
-        }
-        if (var_map.count("recompile-shader"))
-            return QuitRequested;
-
-        if (cfg.load_config || cfg.config_path != root_paths.get_base_path()) {
+        if (cfg.load_config || Radical::Path(cfg.config_path) != root_paths.get_base_path()) {
             if (cfg.config_path.empty()) {
                 cfg.config_path = root_paths.get_base_path();
             } else {
@@ -268,15 +265,15 @@ ExitCode init(Config &cfg, int argc, char **argv, const Root &root_paths) {
         }
 
         // Get LLE modules from the command line, otherwise get the modules from the YML file
-        if (var_map.count("lle-modules") && !cfg.load_config) {
-            const auto lle_modules = var_map["lle-modules"].as<std::string>();
-            cfg.lle_modules = string_utils::split_string(lle_modules, ',');
-        }
+//        if (var_map.count("lle-modules") && !cfg.load_config) {
+//            const auto lle_modules = var_map["lle-modules"].as<std::string>();
+//            cfg.lle_modules = string_utils::split_string(lle_modules, ',');
+//        }
 
         logging::set_level(static_cast<spdlog::level::level_enum>(cfg.log_level));
 
-        LOG_INFO_IF(cfg.vpk_path, "input-vpk-path: {}", *cfg.vpk_path);
-        LOG_INFO_IF(cfg.run_title_id, "input-installed-id: {}", *cfg.run_title_id);
+        LOG_INFO_IF(cfg.vpk_path, "input-vpk-path: {}", cfg.vpk_path.getValue());
+        LOG_INFO_IF(cfg.run_title_id, "input-installed-id: {}", cfg.run_title_id.getValue());
         if (!cfg.lle_modules.empty()) {
             std::string modules;
             for (const auto &mod : cfg.lle_modules) {
@@ -301,7 +298,7 @@ ExitCode init(Config &cfg, int argc, char **argv, const Root &root_paths) {
     }
 
     // Save any changes made in command-line arguments
-    if (cfg.overwrite_config || !fs::exists(check_path(cfg.config_path))) {
+    if (cfg.overwrite_config || !Radical::Path(check_path(cfg.config_path)).exists()) {
         if (serialize(cfg, cfg.config_path) != Success)
             return InitConfigFailed;
     }

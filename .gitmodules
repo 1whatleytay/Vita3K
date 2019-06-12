@@ -52,9 +52,6 @@
 [submodule "src/external/SPIRV-Cross"]
 	path = src/external/SPIRV-Cross
 	url = https://github.com/KhronosGroup/SPIRV-Cross.git
-[submodule "src/external/boost"]
-	path = src/external/boost
-	url = https://github.com/Vita3K/ext-boost.git
 [submodule "src/external/dlmalloc"]
 	path = src/external/dlmalloc
 	url = https://github.com/Vita3K/dlmalloc
@@ -67,3 +64,6 @@
 [submodule "src/external/unicorn-src"]
 	path = src/external/unicorn-src
 	url = https://github.com/unicorn-engine/unicorn.git
+[submodule "src/external/radical"]
+	path = src/external/radical
+	url = https://github.com/1whatleytay/radical.git

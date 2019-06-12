@@ -11,9 +11,10 @@ add_library(
 	include/util/resource.h
 	include/util/string_utils.h
 	include/util/log.h
+	include/util/optional.h
 	include/util/function_info.h
 	src/util.cpp
 )
 
 target_include_directories(util PUBLIC include)
-target_link_libraries(util PUBLIC spdlog)
+target_link_libraries(util PUBLIC radical++ spdlog)

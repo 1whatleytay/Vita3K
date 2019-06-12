@@ -27,7 +27,7 @@ namespace logging {
 
 ExitCode init(const Root &root_paths);
 void set_level(spdlog::level::level_enum log_level);
-ExitCode add_sink(const fs::path &log_path);
+ExitCode add_sink(const Radical::Path &log_path);
 
 #define LOG_TRACE SPDLOG_TRACE
 #define LOG_DEBUG SPDLOG_DEBUG

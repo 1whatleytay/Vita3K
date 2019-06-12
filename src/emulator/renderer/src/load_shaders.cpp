@@ -16,12 +16,12 @@ using namespace glbinding;
 namespace renderer {
 static std::string load_shader(const char *hash, const char *extension, const char *base_path) {
     const auto shader_path = fs_utils::construct_file_name(base_path, "shaders", hash, extension);
-    fs::ifstream is(shader_path, fs::ifstream::binary);
+    std::ifstream is(shader_path.get(), std::ifstream::binary);
     if (!is) {
         return std::string();
     }
 
-    is.seekg(0, fs::ifstream::end);
+    is.seekg(0, std::ifstream::end);
     const size_t size = is.tellg();
     is.seekg(0);
 
@@ -33,14 +33,14 @@ static std::string load_shader(const char *hash, const char *extension, const ch
 
 static void dump_missing_shader(const char *hash, const char *extension, const SceGxmProgram &program, const char *source, const char *spirv,
     const char *disasm, const char *base_path, const char *title_id) {
-    const fs::path shader_base_dir{ fs::path("shaderlog") / title_id };
-    if (!fs::exists(base_path / shader_base_dir))
-        fs::create_directories(base_path / shader_base_dir);
+    const Radical::Path shader_base_dir{ Radical::Path("shaderlog") / title_id };
+    if (!(Radical::Path(base_path) / shader_base_dir).exists())
+        (Radical::Path(base_path) / shader_base_dir).createDirectories();
 
     const auto shader_base_path = fs_utils::construct_file_name(base_path, shader_base_dir, hash, extension);
 
     // Dump missing shader GLSL.
-    fs::ofstream glsl_file(shader_base_path);
+    std::ofstream glsl_file(shader_base_path.get());
     if (glsl_file) {
         glsl_file << source;
         glsl_file.close();
@@ -48,17 +48,17 @@ static void dump_missing_shader(const char *hash, const char *extension, const S
 
     const auto write_data_with_ext = [&](const char *ext, const char *data, const std::int64_t size) {
         // Dump missing shader binary.
-        fs::path out_path{ shader_base_path };
-        out_path.replace_extension(ext);
+        Radical::Path out_path{ shader_base_path };
+        out_path.setExtension(ext);
 
         if (size == -1) {
-            fs::ofstream of{ out_path };
+            std::ofstream of{ out_path.get() };
             if (!of.fail()) {
                 of << data; // This is a normal string
                 of.close();
             }
         } else {
-            fs::ofstream of{ out_path, fs::ofstream::binary };
+            std::ofstream of{ out_path.get(), std::ofstream::binary };
             if (!of.fail()) {
                 of.write(data, size);
                 of.close();

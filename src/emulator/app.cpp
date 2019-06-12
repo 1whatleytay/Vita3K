@@ -135,18 +135,18 @@ static const char *miniz_get_error(const ZipPtr &zip) {
     return mz_zip_get_error_string(mz_zip_get_last_error(zip.get()));
 }
 
-static bool read_file_from_zip(vfs::FileBuffer &buf, const fs::path &file, const ZipPtr &zip) {
-    if (!mz_zip_reader_extract_file_to_callback(zip.get(), file.generic_path().string().c_str(), &write_to_buffer, &buf, 0)) {
-        LOG_CRITICAL("miniz error: {} extracting file: {}", miniz_get_error(zip), file.generic_path().string());
+static bool read_file_from_zip(vfs::FileBuffer &buf, const Radical::Path &file, const ZipPtr &zip) {
+    if (!mz_zip_reader_extract_file_to_callback(zip.get(), file.get().c_str(), &write_to_buffer, &buf, 0)) {
+        LOG_CRITICAL("miniz error: {} extracting file: {}", miniz_get_error(zip), file.get());
         return false;
     }
 
     return true;
 }
 
-bool install_vpk(Ptr<const void> &entry_point, HostState &host, const fs::path &path) {
-    if (!fs::exists(path)) {
-        LOG_CRITICAL("Failed to load VPK file path: {}", path.generic_path().string());
+bool install_vpk(Ptr<const void> &entry_point, HostState &host, const Radical::Path &path) {
+    if (!path.exists()) {
+        LOG_CRITICAL("Failed to load VPK file path: {}", path.get());
         return false;
     }
     const ZipPtr zip(new mz_zip_archive, delete_zip);
@@ -157,7 +157,7 @@ bool install_vpk(Ptr<const void> &entry_point, HostState &host, const fs::path &
 #ifdef WIN32
     _wfopen_s(&vpk_fp, path.generic_path().wstring().c_str(), L"rb");
 #else
-    vpk_fp = fopen(path.generic_path().string().c_str(), "rb");
+    vpk_fp = fopen(path.get().c_str(), "rb");
 #endif
 
     if (!mz_zip_reader_init_cfile(zip.get(), vpk_fp, 0, 0)) {
@@ -166,18 +166,18 @@ bool install_vpk(Ptr<const void> &entry_point, HostState &host, const fs::path &
     }
 
     int num_files = mz_zip_reader_get_num_files(zip.get());
-    fs::path sfo_path = "sce_sys/param.sfo";
+    Radical::Path sfo_path = "sce_sys/param.sfo";
 
     for (int i = 0; i < num_files; i++) {
         mz_zip_archive_file_stat file_stat;
         if (!mz_zip_reader_file_stat(zip.get(), i, &file_stat)) {
             continue;
         }
-        if (fs::path(file_stat.m_filename) == "sce_module/steroid.suprx") {
+        if (Radical::Path(file_stat.m_filename) == "sce_module/steroid.suprx") {
             LOG_CRITICAL("A Vitamin dump was detected, aborting installation...");
             return false;
         }
-        if (fs::path(file_stat.m_filename) == sfo_path) {
+        if (Radical::Path(file_stat.m_filename) == sfo_path) {
             break;
         }
     }
@@ -191,10 +191,10 @@ bool install_vpk(Ptr<const void> &entry_point, HostState &host, const fs::path &
     load_sfo(sfo_handle, params);
     find_data(host.io.title_id, sfo_handle, "TITLE_ID");
 
-    fs::path output_path{ fs::path(host.pref_path) / "ux0/app" / host.io.title_id };
+    Radical::Path output_path{ Radical::Path(host.pref_path) / "ux0/app" / host.io.title_id };
 
-    const auto created = fs::create_directories(output_path);
-    if (!created) {
+    output_path.createDirectories();
+    if (!output_path.isDirectory()) {
         gui::GenericDialogState status = gui::UNK_STATE;
         while (handle_events(host) && (status == 0)) {
             ImGui_ImplSdlGL3_NewFrame(host.window.get());
@@ -220,19 +220,19 @@ bool install_vpk(Ptr<const void> &entry_point, HostState &host, const fs::path &
             continue;
         }
 
-        const fs::path file_output = { output_path / file_stat.m_filename };
+        const Radical::Path file_output = { output_path / file_stat.m_filename };
         if (mz_zip_reader_is_file_a_directory(zip.get(), i)) {
-            fs::create_directories(output_path);
+            output_path.createDirectories();
         } else {
-            if (!fs::exists(file_output.parent_path())) {
-                fs::create_directories(file_output.parent_path());
+            if (!file_output.getBasePath().exists()) {
+                file_output.getBasePath().createDirectories();
             }
 
-            LOG_INFO("Extracting {}", file_output.generic_path().string());
-            mz_zip_reader_extract_to_file(zip.get(), i, file_output.generic_path().string().c_str(), 0);
+            LOG_INFO("Extracting {}", file_output.get());
+            mz_zip_reader_extract_to_file(zip.get(), i, file_output.get().c_str(), 0);
         }
     }
-    fs::create_directories(fs::path(host.pref_path) / "ux0/user/00/savedata" / host.io.title_id);
+    (Radical::Path(host.pref_path) / "ux0/user/00/savedata" / host.io.title_id).createDirectories();
 
     LOG_INFO("{} installed succesfully!", host.io.title_id);
     return true;
@@ -243,7 +243,7 @@ static ExitCode load_app_impl(Ptr<const void> &entry_point, HostState &host, con
         return InvalidApplicationPath;
 
     if (run_type == AppRunType::Vpk) {
-        if (!install_vpk(entry_point, host, path)) {
+        if (!install_vpk(entry_point, host, Radical::Path(std::string(path.begin(), path.end())))) {
             return FileNotFound;
         }
     } else if (run_type == AppRunType::Extracted) {
@@ -270,8 +270,8 @@ static ExitCode load_app_impl(Ptr<const void> &entry_point, HostState &host, con
     }
 
     if (host.cfg.archive_log) {
-        const fs::path log_directory{ host.base_path + "/logs" };
-        fs::create_directory(log_directory);
+        const Radical::Path log_directory{ host.base_path + "/logs" };
+        log_directory.createDirectory();
         const auto log_name{ log_directory / (string_utils::remove_special_chars(host.game_title) + " - [" + host.io.title_id + "].log") };
         if (logging::add_sink(log_name) != Success)
             return InitConfigFailed;

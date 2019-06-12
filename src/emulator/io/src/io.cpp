@@ -171,45 +171,45 @@ to_host_path(const std::string &path, const std::string &pref_path, VitaIoDevice
 // * End of utility functions *
 // ****************************
 
-bool read_file(VitaIoDevice device, FileBuffer &buf, const std::string &pref_path, const fs::path &vfs_file_path) {
-    const fs::path host_file_path{ fs::path(pref_path) / get_device_string(device) / vfs_file_path };
+bool read_file(VitaIoDevice device, FileBuffer &buf, const std::string &pref_path, const Radical::Path &vfs_file_path) {
+    const Radical::Path host_file_path{ Radical::Path(pref_path) / get_device_string(device) / vfs_file_path };
 
-    fs::ifstream f(host_file_path, fs::ifstream::binary);
+    std::ifstream f(host_file_path.get(), std::ifstream::binary);
     if (!f) {
         return false;
     }
-    f.unsetf(fs::ifstream::skipws);
-    buf.reserve(fs::file_size(host_file_path));
+    f.unsetf(std::ifstream::skipws);
+    buf.reserve(host_file_path.getFileSize());
     buf.insert(buf.begin(), std::istream_iterator<uint8_t>(f), std::istream_iterator<uint8_t>());
     return true;
 }
 
-bool read_app_file(FileBuffer &buf, const std::string &pref_path, const std::string &title_id, const fs::path &vfs_file_path) {
-    return read_file(VitaIoDevice::UX0, buf, pref_path, fs::path("app") / title_id / vfs_file_path);
+bool read_app_file(FileBuffer &buf, const std::string &pref_path, const std::string &title_id, const Radical::Path &vfs_file_path) {
+    return read_file(VitaIoDevice::UX0, buf, pref_path, Radical::Path("app") / title_id / vfs_file_path);
 }
 
 } // namespace vfs
 
-bool init(IOState &io, const fs::path &base_path, const fs::path &pref_path) {
-    const fs::path ux0{ pref_path / "ux0" };
-    const fs::path uma0{ pref_path / "uma0" };
-    const fs::path ux0_data{ ux0 / "data" };
-    const fs::path uma0_data{ uma0 / "data" };
-    const fs::path ux0_app{ ux0 / "app" };
-    const fs::path ux0_user{ ux0 / "user" };
-    const fs::path ux0_user00{ ux0_user / "00" };
-    const fs::path ux0_savedata{ ux0_user00 / "savedata" };
+bool init(IOState &io, const Radical::Path &base_path, const Radical::Path &pref_path) {
+    const Radical::Path ux0{ pref_path / "ux0" };
+    const Radical::Path uma0{ pref_path / "uma0" };
+    const Radical::Path ux0_data{ ux0 / "data" };
+    const Radical::Path uma0_data{ uma0 / "data" };
+    const Radical::Path ux0_app{ ux0 / "app" };
+    const Radical::Path ux0_user{ ux0 / "user" };
+    const Radical::Path ux0_user00{ ux0_user / "00" };
+    const Radical::Path ux0_savedata{ ux0_user00 / "savedata" };
 
-    fs::create_directories(ux0);
-    fs::create_directory(ux0_data);
-    fs::create_directory(ux0_app);
-    fs::create_directory(ux0_user);
-    fs::create_directory(ux0_user00);
-    fs::create_directory(ux0_savedata);
-    fs::create_directory(uma0);
-    fs::create_directory(uma0_data);
+    ux0.createDirectories();
+    ux0_data.createDirectory();
+    ux0_app.createDirectory();
+    ux0_user.createDirectory();
+    ux0_user00.createDirectory();
+    ux0_savedata.createDirectory();
+    uma0.createDirectory();
+    uma0_data.createDirectory();
 
-    fs::create_directory(base_path / "shaderlog");
+    (base_path / "shaderlog").createDirectory();
 
     return true;
 }
@@ -464,7 +464,7 @@ int remove_file(IOState &io, const char *file, const char *pref_path, const char
     case VitaIoDevice::UX0:
     case VitaIoDevice::UMA0: {
         std::string file_path = to_host_path(translated_path, pref_path, device);
-        fs::remove(file_path);
+        Radical::Path(file_path).removeFile();
         return 0;
     }
     default: {
@@ -487,15 +487,13 @@ int create_dir(IOState &io, const char *dir, int mode, const char *pref_path, co
     case VitaIoDevice::UX0:
     case VitaIoDevice::UMA0: {
         std::string dir_path = to_host_path(translated_path, pref_path, device);
-        boost::system::error_code error_code;
+        Radical::Path(dir_path).createDirectory();
 
-        fs::create_directory(dir_path, error_code);
-
-        if (error_code == std::errc::no_such_file_or_directory) {
-            return IO_ERROR(SCE_ERROR_ERRNO_ENOENT);
-        } else if (error_code == std::errc::file_exists) {
-            return IO_ERROR(SCE_ERROR_ERRNO_EEXIST);
-        }
+//        if (error_code == std::errc::no_such_file_or_directory) {
+//            return IO_ERROR(SCE_ERROR_ERRNO_ENOENT);
+//        } else if (error_code == std::errc::file_exists) {
+//            return IO_ERROR(SCE_ERROR_ERRNO_EEXIST);
+//        }
 
         return 0;
     }
@@ -519,7 +517,7 @@ int remove_dir(IOState &io, const char *dir, const char *pref_path, const char *
     case VitaIoDevice::UX0:
     case VitaIoDevice::UMA0: {
         std::string dir_path = to_host_path(translated_path, pref_path, device);
-        fs::remove(dir_path);
+        Radical::Path(dir_path).removeDirectory();
         return 0;
     }
     default: {

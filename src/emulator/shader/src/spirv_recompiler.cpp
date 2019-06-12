@@ -29,7 +29,6 @@
 
 #include <SPIRV/SpvBuilder.h>
 #include <SPIRV/disassemble.h>
-#include <boost/optional.hpp>
 #include <spirv_glsl.hpp>
 
 #include <algorithm>
@@ -40,8 +39,6 @@
 #include <sstream>
 #include <utility>
 #include <vector>
-
-using boost::optional;
 
 static constexpr bool LOG_SHADER_CODE = true;
 static constexpr bool DUMP_SPIRV_BINARIES = false;
@@ -1031,18 +1028,18 @@ std::string convert_gxp_to_glsl(const SceGxmProgram &program, const std::string 
 }
 
 void convert_gxp_to_glsl_from_filepath(const std::string &shader_filepath) {
-    const fs::path shader_filepath_str{ shader_filepath };
-    fs::ifstream gxp_stream(shader_filepath_str, fs::ifstream::binary);
+    const Radical::Path shader_filepath_str{ shader_filepath };
+    std::ifstream gxp_stream(shader_filepath_str.get(), std::ifstream::binary);
 
     if (!gxp_stream.is_open())
         return;
 
-    const auto gxp_file_size = fs::file_size(shader_filepath_str);
+    const auto gxp_file_size = shader_filepath_str.getFileSize();
     const auto gxp_program = static_cast<SceGxmProgram *>(calloc(gxp_file_size, 1));
 
     gxp_stream.read(reinterpret_cast<char *>(gxp_program), gxp_file_size);
 
-    convert_gxp_to_glsl(*gxp_program, shader_filepath_str.filename().string(), true);
+    convert_gxp_to_glsl(*gxp_program, shader_filepath_str.getName(), true);
 
     free(gxp_program);
 }

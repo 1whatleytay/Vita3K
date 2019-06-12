@@ -17,37 +17,35 @@
 
 #pragma once
 
-#include <boost/filesystem.hpp>
-
-namespace fs = boost::filesystem;
+#include <radical/radical.hpp>
 
 class Root {
-    fs::path base_path;
-    fs::path pref_path;
+    Radical::Path base_path;
+    Radical::Path pref_path;
 
 public:
-    void set_base_path(const fs::path &p) {
+    void set_base_path(const Radical::Path &p) {
         base_path = p;
     }
 
-    fs::path get_base_path() const {
+    Radical::Path get_base_path() const {
         return base_path;
     }
 
     std::string get_base_path_string() const {
-        return base_path.generic_path().string();
+        return base_path.get();
     }
 
-    void set_pref_path(const fs::path &p) {
+    void set_pref_path(const Radical::Path &p) {
         pref_path = p;
     }
 
-    fs::path get_pref_path() const {
+    Radical::Path get_pref_path() const {
         return pref_path;
     }
 
     std::string get_pref_path_string() const {
-        return pref_path.generic_path().string();
+        return pref_path.get();
     }
 }; // class root
 
@@ -61,12 +59,12 @@ namespace fs_utils {
   * \param  extension   The extension of the file (optional)
   * \return A complete Boost.Filesystem file path normalized.
   */
-inline fs::path construct_file_name(const fs::path &base_path, const fs::path &folder_path, const fs::path &file_name, const fs::path &extension = "") {
-    fs::path full_file_path{ base_path / folder_path / file_name };
+inline Radical::Path construct_file_name(const Radical::Path &base_path, const Radical::Path &folder_path, const Radical::Path &file_name, const Radical::Path &extension) {
+    Radical::Path full_file_path{ base_path / folder_path / file_name };
     if (!extension.empty())
-        full_file_path.replace_extension(extension);
+        full_file_path.setExtension(extension.get());
 
-    return full_file_path.generic_path();
+    return full_file_path;
 }
 
 } // namespace fs_utils

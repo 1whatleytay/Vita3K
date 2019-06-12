@@ -18,19 +18,16 @@
 #pragma once
 
 #include <util/fs.h>
-
-#include <boost/optional.hpp>
+#include <util/optional.h>
 
 #include <string>
 #include <vector>
 
-using boost::optional;
-
 // Config options
 struct Config {
-    optional<std::string> vpk_path;
-    optional<std::string> run_title_id;
-    optional<std::string> recompile_shader_path;
+    Optional<std::string> vpk_path;
+    Optional<std::string> run_title_id;
+    Optional<std::string> recompile_shader_path;
     int log_level = 0;
     int sys_button = 1;
     int sys_lang = 1;
@@ -44,12 +41,12 @@ struct Config {
     bool show_gui = false;
     bool show_game_background = true;
     std::string pref_path = {};
-    fs::path config_path = {};
+    Radical::Path config_path = {};
     bool overwrite_config = true;
     bool load_config = false;
     bool archive_log = false;
     bool texture_cache = true;
-    optional<bool> wait_for_debugger;
+    Optional<bool> wait_for_debugger;
     std::string background_image = {};
     float background_alpha = 0.300f;
     int icon_size = 64;

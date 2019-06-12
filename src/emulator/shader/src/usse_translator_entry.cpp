@@ -24,8 +24,7 @@
 #include <shader/usse_translator.h>
 #include <shader/usse_translator_types.h>
 #include <util/log.h>
-
-#include <boost/optional/optional.hpp>
+#include <util/optional.h>
 
 #include <map>
 
@@ -35,7 +34,7 @@ template <typename Visitor>
 using USSEMatcher = shader::decoder::Matcher<Visitor, uint64_t>;
 
 template <typename V>
-boost::optional<const USSEMatcher<V> &> DecodeUSSE(uint64_t instruction) {
+Optional<const USSEMatcher<V> *> DecodeUSSE(uint64_t instruction) {
     static const std::vector<USSEMatcher<V>> table = {
     // clang-format off
     #define INST(fn, name, bitstring) shader::decoder::detail::detail<USSEMatcher<V>>::GetMatcher(fn, name, bitstring)
@@ -496,13 +495,12 @@ boost::optional<const USSEMatcher<V> &> DecodeUSSE(uint64_t instruction) {
     const auto matches_instruction = [instruction](const auto &matcher) { return matcher.Matches(instruction); };
 
     auto iter = std::find_if(table.begin(), table.end(), matches_instruction);
-    return iter != table.end() ? boost::optional<const USSEMatcher<V> &>(*iter) : boost::none;
+    return iter != table.end() ? Optional(&*iter) : Optional<decltype(&*iter)>();
 }
 
 //
 // Decoder/translator usage
 //
-
 USSERecompiler::USSERecompiler(spv::Builder &b, const SceGxmProgram &program, const SpirvShaderParameters &parameters,
     utils::SpirvUtilFunctions &utils, spv::Function *end_hook_func, const NonDependentTextureQueryCallInfos &queries)
     : b(b)
@@ -589,7 +587,7 @@ spv::Function *USSERecompiler::get_or_recompile_block(const usse::USSEBlock &blo
             // Recompile the instruction, to the current block
             auto decoder = usse::DecodeUSSE<usse::USSETranslatorVisitor>(cur_instr);
             if (decoder)
-                decoder->call(visitor, cur_instr);
+                decoder.getValue()->call(visitor, cur_instr);
             else
                 LOG_DISASM("{:016x}: error: instruction unmatched", cur_instr);
         }

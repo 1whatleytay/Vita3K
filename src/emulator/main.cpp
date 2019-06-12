@@ -42,8 +42,8 @@ int main(int argc, char *argv[]) {
     root_paths.set_pref_path(SDL_GetPrefPath(org_name, app_name));
 
     // Create default preference path for safety
-    if (!fs::exists(root_paths.get_pref_path()))
-        fs::create_directories(root_paths.get_pref_path());
+    if (!Radical::Path(root_paths.get_pref_path()).exists())
+        root_paths.get_pref_path().createDirectories();
 
     if (logging::init(root_paths) != Success)
         return InitConfigFailed;
@@ -51,9 +51,9 @@ int main(int argc, char *argv[]) {
     Config cfg{};
     if (const auto err = config::init(cfg, argc, argv, root_paths) != Success) {
         if (err == QuitRequested) {
-            if (cfg.recompile_shader_path.is_initialized()) {
-                LOG_INFO("Recompiling {}", *cfg.recompile_shader_path);
-                shader::convert_gxp_to_glsl_from_filepath(*cfg.recompile_shader_path);
+            if (cfg.recompile_shader_path) {
+                LOG_INFO("Recompiling {}", cfg.recompile_shader_path.getValue());
+                shader::convert_gxp_to_glsl_from_filepath(cfg.recompile_shader_path.getValue());
             }
             return Success;
         }
@@ -80,7 +80,7 @@ int main(int argc, char *argv[]) {
 
     std::wstring vpk_path_wide;
     if (run_type == AppRunType::Vpk) {
-        vpk_path_wide = string_utils::utf_to_wide(*cfg.vpk_path);
+        vpk_path_wide = string_utils::utf_to_wide(cfg.vpk_path.getValue());
     } else {
         SDL_Event ev;
         while (SDL_PollEvent(&ev)) {
@@ -94,7 +94,7 @@ int main(int argc, char *argv[]) {
 
     // TODO: Clean this, ie. make load_app overloads called depending on run type
     if (run_type == AppRunType::Extracted) {
-        vpk_path_wide = string_utils::utf_to_wide(*cfg.run_title_id);
+        vpk_path_wide = string_utils::utf_to_wide(cfg.run_title_id.getValue());
     }
 
     HostState host;

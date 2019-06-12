@@ -17,6 +17,8 @@
 
 #pragma once
 
+#include <util/optional.h>
+
 #include <gxm/types.h>
 #include <shader/spirv_recompiler.h>
 #include <shader/usse_program_analyzer.h>
@@ -24,12 +26,9 @@
 #include <shader/usse_utilities.h>
 
 #include <SPIRV/SpvBuilder.h>
-#include <boost/optional/optional.hpp>
 
 #include <array>
 #include <map>
-
-using boost::optional;
 
 namespace shader::usse {
 
