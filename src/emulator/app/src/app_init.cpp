@@ -160,7 +160,24 @@ bool init(HostState &state, Config cfg, const Root &root_paths) {
         state.pref_path = state.cfg.pref_path + '/';
 
     state.window = WindowPtr(SDL_CreateWindow(window_title, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, DEFAULT_RES_WIDTH, DEFAULT_RES_HEIGHT, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE), SDL_DestroyWindow);
-    if (!state.window || !init(state.mem) || !init(state.audio, resume_thread) || !init(state.io, state.base_path, state.pref_path)) {
+    if (!state.window) {
+        error_dialog("Window could not be created.", nullptr);
+        return false;
+    }
+
+    if (!init(state.mem)) {
+        error_dialog("Could not initialize memory.", state.window.get());
+        return false;
+    }
+
+    if (!init(state.audio, resume_thread)) {
+        error_dialog("Could not initialize audio.", state.window.get());
+        return false;
+    }
+
+
+    if (!init(state.io, state.base_path, state.pref_path)) {
+        error_dialog("Could not initialize IO controller.", state.window.get());
         return false;
     }
 
@@ -170,7 +187,7 @@ bool init(HostState &state, Config cfg, const Root &root_paths) {
 
     state.glcontext = GLContextPtr(SDL_GL_CreateContext(state.window.get()), SDL_GL_DeleteContext);
     if (!state.glcontext) {
-        error_dialog("Could not create OpenGL context!\nDoes your GPU support OpenGL 4.1?", NULL);
+        error_dialog("Could not create OpenGL context!\nDoes your GPU support OpenGL 4.1?", state.window.get());
         return false;
     }
 
