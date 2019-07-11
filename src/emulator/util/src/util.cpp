@@ -56,7 +56,8 @@ void set_level(spdlog::level::level_enum log_level) {
 ExitCode add_sink(const Radical::Path &log_path) {
     try {
 #ifdef WIN32
-        sinks.push_back(std::make_shared<spdlog::sinks::basic_file_sink_mt>(log_path.generic_path().wstring(), true));
+        std::string log_path_string = log_path.get();
+        sinks.push_back(std::make_shared<spdlog::sinks::basic_file_sink_mt>(std::wstring(log_path_string.begin(), log_path_string.end()), true));
 #else
         sinks.push_back(std::make_shared<spdlog::sinks::basic_file_sink_mt>(log_path.get(), true));
 #endif

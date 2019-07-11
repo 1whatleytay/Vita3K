@@ -100,7 +100,7 @@ void get_game_titles(HostState &host) {
     if (!app_path.exists())
         return;
 
-    std::vector<Radical::Path> it = app_path.getContents();
+    std::vector<Radical::Path> it = app_path.getRealPath().getContents();
     for (const Radical::Path &path : it) {
         if (!path.empty() && path.get() != "." && path.get() != "..") {
             vfs::FileBuffer params;

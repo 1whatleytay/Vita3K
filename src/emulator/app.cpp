@@ -155,7 +155,8 @@ bool install_vpk(Ptr<const void> &entry_point, HostState &host, const Radical::P
     FILE *vpk_fp;
 
 #ifdef WIN32
-    _wfopen_s(&vpk_fp, path.generic_path().wstring().c_str(), L"rb");
+    std::string path_string = path.get();
+    _wfopen_s(&vpk_fp, std::wstring(path_string.begin(), path_string.end()).c_str(), L"rb");
 #else
     vpk_fp = fopen(path.get().c_str(), "rb");
 #endif
