@@ -11,6 +11,7 @@
 #include <memory>
 #include <tuple>
 #include <vector>
+#include <string>
 
 namespace renderer {
 

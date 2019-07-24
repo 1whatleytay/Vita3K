@@ -175,3 +175,10 @@ add_subdirectory(SPIRV-Cross)
 add_library(dlmalloc STATIC "${CMAKE_CURRENT_SOURCE_DIR}/dlmalloc/dlmalloc.cc")
 target_include_directories(dlmalloc PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/dlmalloc")
 target_compile_definitions(dlmalloc PUBLIC ONLY_MSPACES=1)
+
+# Temporary FFMPEG install.
+find_path(AVCODEC_INCLUDE_DIR libavcodec/avcodec.h)
+find_library(AVCODEC_LIBRARY avcodec)
+add_library(ffmpeg INTERFACE)
+target_include_directories(ffmpeg INTERFACE "${AVCODEC_INCLUDE_DIR}")
+target_link_libraries(ffmpeg INTERFACE "${AVCODEC_LIBRARY}")

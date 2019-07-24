@@ -170,3 +170,4 @@ add_library(modules STATIC
 )
 target_include_directories(modules PUBLIC include)
 target_link_libraries(modules PUBLIC module)
+target_link_libraries(modules PRIVATE ffmpeg)

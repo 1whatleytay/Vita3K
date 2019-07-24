@@ -17,6 +17,8 @@
 
 #include "SceAvcodec.h"
 
+#include <psp2/videodec.h>
+
 EXPORT(int, _sceAudiodecClearContext) {
     return UNIMPLEMENTED();
 }
@@ -233,8 +235,12 @@ EXPORT(int, _sceAvcdecGetSeiUserDataNongameapp) {
     return UNIMPLEMENTED();
 }
 
-EXPORT(int, _sceAvcdecQueryDecoderMemSize) {
-    return UNIMPLEMENTED();
+EXPORT(int, _sceAvcdecQueryDecoderMemSize,
+    SceVideodecType codec, const SceAvcdecQueryDecoderInfo *query, SceAvcdecDecoderInfo *decoderInfo) {
+
+    const SceVideodecQueryInitInfoHwAvcdec *info = reinterpret_cast<const SceVideodecQueryInitInfoHwAvcdec *>(query);
+
+    return 0;
 }
 
 EXPORT(int, _sceAvcdecQueryDecoderMemSizeInternal) {
