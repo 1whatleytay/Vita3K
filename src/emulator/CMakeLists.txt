@@ -53,6 +53,10 @@ if (USE_DISCORD_RICH_PRESENCE)
 	add_definitions(-DUSE_DISCORD_RICH_PRESENCE)
 endif()
 
+if (USE_VULKAN)
+	add_definitions(-DUSE_VULKAN)
+endif()
+
 add_subdirectory(app)
 add_subdirectory(audio)
 add_subdirectory(config)
