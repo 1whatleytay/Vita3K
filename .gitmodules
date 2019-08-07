@@ -72,3 +72,6 @@
 [submodule "src/external/better-enums"]
 	path = src/external/better-enums
 	url = https://github.com/aantron/better-enums.git
+[submodule "src/external/VulkanMemoryAllocator"]
+	path = src/external/VulkanMemoryAllocator
+	url = https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git
