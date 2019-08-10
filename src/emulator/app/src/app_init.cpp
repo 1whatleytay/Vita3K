@@ -108,12 +108,12 @@ bool init(HostState &state, Config cfg, const Root &root_paths) {
 
     SDL_WindowFlags window_type;
     switch (backend) {
-        case renderer::Backend::OpenGL:
-            window_type = SDL_WINDOW_OPENGL;
-            break;
-        case renderer::Backend::Vulkan:
-            window_type = SDL_WINDOW_VULKAN;
-            break;
+    case renderer::Backend::OpenGL:
+        window_type = SDL_WINDOW_OPENGL;
+        break;
+    case renderer::Backend::Vulkan:
+        window_type = SDL_WINDOW_VULKAN;
+        break;
     }
 
     state.window = WindowPtr(SDL_CreateWindow(window_title, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, DEFAULT_RES_WIDTH, DEFAULT_RES_HEIGHT, window_type | SDL_WINDOW_RESIZABLE), SDL_DestroyWindow);
@@ -125,7 +125,7 @@ bool init(HostState &state, Config cfg, const Root &root_paths) {
 
     if (state.cfg.overwrite_config)
         config::serialize_config(state.cfg, state.cfg.config_path);
-    
+
 #ifdef USE_DISCORD_RICH_PRESENCE
     discord::init();
     if (cfg.discord_rich_presence) {
@@ -141,7 +141,14 @@ bool init(HostState &state, Config cfg, const Root &root_paths) {
         update_viewport(state);
         return true;
     } else {
-        error_dialog("Could not create OpenGL context!\nDoes your GPU at least support OpenGL 4.1?", nullptr);
+        switch (backend) {
+        case renderer::Backend::OpenGL:
+            error_dialog("Could not create OpenGL context!\nDoes your GPU at least support OpenGL 4.1?", nullptr);
+            break;
+        case renderer::Backend::Vulkan:
+            error_dialog("Could not create Vulkan context!");
+            break;
+        }
         return false;
     }
 }
