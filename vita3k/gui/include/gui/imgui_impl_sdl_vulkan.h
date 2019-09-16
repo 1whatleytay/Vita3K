@@ -14,8 +14,6 @@ struct ImGui_VulkanState : public ImGui_State {
     vk::ShaderModule vertex_module;
     vk::ShaderModule fragment_module;
 
-    vk::RenderPass renderpass;
-    vk::Framebuffer framebuffers[2];
     vk::DescriptorSetLayout matrix_layout;
     vk::DescriptorSetLayout sampler_layout;
     vk::DescriptorPool descriptor_pool;

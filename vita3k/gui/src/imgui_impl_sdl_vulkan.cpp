@@ -32,7 +32,7 @@ struct TextureState {
     vk::DescriptorSet descriptor_set;
 };
 
-inline renderer::vulkan::VulkanState &get_renderer(ImGui_VulkanState &state) {
+inline static renderer::vulkan::VulkanState &get_renderer(ImGui_VulkanState &state) {
     return dynamic_cast<renderer::vulkan::VulkanState &>(*state.renderer);
 }
 
@@ -80,67 +80,9 @@ IMGUI_API void ImGui_ImplSdlVulkan_Shutdown(ImGui_VulkanState &state) {
 
 static void ImGui_ImplSdlVulkan_DeletePipeline(ImGui_VulkanState &state) {
     get_renderer(state).device.destroy(state.pipeline);
-    for (vk::Framebuffer framebuffer : state.framebuffers)
-        get_renderer(state).device.destroy(framebuffer);
-    get_renderer(state).device.destroy(state.renderpass);
 }
 
 static bool ImGui_ImplSdlVulkan_CreatePipeline(ImGui_VulkanState &state) {
-    // Create GUI Renderpass
-    vk::AttachmentDescription attachment_description(
-        vk::AttachmentDescriptionFlags(), // No Flags
-        vk::Format::eB8G8R8A8Unorm, // Format, BGRA is standard
-        vk::SampleCountFlagBits::e1, // No Multisampling
-        vk::AttachmentLoadOp::eClear, // Clear Image
-        vk::AttachmentStoreOp::eStore, // Keep Image Data
-        vk::AttachmentLoadOp::eDontCare, // No Stencils
-        vk::AttachmentStoreOp::eDontCare, // No Stencils
-        vk::ImageLayout::eUndefined, // Initial Layout
-        vk::ImageLayout::eColorAttachmentOptimal // Final Layout
-    );
-
-    vk::AttachmentReference attachment_reference(
-        0, // attachments[0]
-        vk::ImageLayout::eColorAttachmentOptimal // Image Layout
-    );
-
-    std::vector<vk::SubpassDescription> subpasses = {
-        vk::SubpassDescription(
-            vk::SubpassDescriptionFlags(), // No Flags
-            vk::PipelineBindPoint::eGraphics, // Type
-            0, nullptr, // No Inputs
-            1, &attachment_reference, // Color Attachment References
-            nullptr, nullptr, // No Resolve or Depth/Stencil for now
-            0, nullptr // Vulkan Book says you don't need this for a Color Attachment?
-            )
-    };
-
-    vk::RenderPassCreateInfo renderpass_info(
-        vk::RenderPassCreateFlags(), // No Flags
-        1, &attachment_description, // Attachments
-        subpasses.size(), subpasses.data(), // Subpasses
-        0, nullptr // Dependencies
-    );
-
-    state.renderpass = get_renderer(state).device.createRenderPass(renderpass_info, nullptr);
-    if (!state.renderpass) {
-        LOG_ERROR("Failed to create Vulkan gui renderpass.");
-        return false;
-    }
-
-    // Create Framebuffer
-    for (uint32_t a = 0; a < 2; a++) {
-        vk::FramebufferCreateInfo framebuffer_info(
-            vk::FramebufferCreateFlags(), // No Flags
-            state.renderpass, // Renderpass
-            1, &get_renderer(state).swapchain_views[a], // Attachments
-            get_renderer(state).swapchain_width, get_renderer(state).swapchain_height, // Size
-            1 // Layers
-        );
-
-        state.framebuffers[a] = get_renderer(state).device.createFramebuffer(framebuffer_info, nullptr);
-    }
-
     std::vector<vk::PipelineShaderStageCreateInfo> shader_stage_infos = {
         vk::PipelineShaderStageCreateInfo(
             vk::PipelineShaderStageCreateFlags(), // No Flags
@@ -274,7 +216,7 @@ static bool ImGui_ImplSdlVulkan_CreatePipeline(ImGui_VulkanState &state) {
         &gui_pipeline_blend_info,
         &gui_pipeline_dynamic_info,
         state.pipeline_layout,
-        state.renderpass,
+        get_renderer(state).renderpass,
         0,
         vk::Pipeline(),
         0);
@@ -425,8 +367,8 @@ IMGUI_API void ImGui_ImplSdlVulkan_RenderDrawData(ImGui_VulkanState &state) {
     state.command_buffer.updateBuffer(state.transformation_buffer, 0, sizeof(matrix), matrix);
 
     vk::RenderPassBeginInfo renderpass_begin_info(
-        state.renderpass, // Renderpass
-        state.framebuffers[image_index], // Framebuffer
+        get_renderer(state).renderpass, // Renderpass
+        get_renderer(state).framebuffers[image_index], // Framebuffer
         vk::Rect2D(
             vk::Offset2D(0, 0),
             vk::Extent2D(get_renderer(state).swapchain_width, get_renderer(state).swapchain_height)),

@@ -61,5 +61,8 @@ struct VulkanState : public renderer::State {
     uint32_t swapchain_width = 0, swapchain_height = 0;
     vk::Image swapchain_images[2];
     vk::ImageView swapchain_views[2];
+
+    vk::RenderPass renderpass;
+    vk::Framebuffer framebuffers[2];
 };
 } // namespace renderer::vulkan

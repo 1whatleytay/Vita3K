@@ -206,6 +206,9 @@ bool resize_swapchain(VulkanState &state, vk::Extent2D size) {
     state.swapchain_height = size.height;
 
     if (state.swapchain) {
+        state.device.destroy(state.renderpass);
+        for (vk::Framebuffer framebuffer : state.framebuffers)
+            state.device.destroy(framebuffer);
         for (vk::ImageView view : state.swapchain_views)
             state.device.destroy(view);
         state.device.destroy(state.swapchain);
@@ -266,6 +269,60 @@ bool resize_swapchain(VulkanState &state, vk::Extent2D size) {
         }
 
         state.swapchain_views[a] = view;
+    }
+
+    vk::AttachmentDescription attachment_description(
+        vk::AttachmentDescriptionFlags(), // No Flags
+        vk::Format::eB8G8R8A8Unorm, // Format, BGRA is standard
+        vk::SampleCountFlagBits::e1, // No Multisampling
+        vk::AttachmentLoadOp::eClear, // Clear Image
+        vk::AttachmentStoreOp::eStore, // Keep Image Data
+        vk::AttachmentLoadOp::eDontCare, // No Stencils
+        vk::AttachmentStoreOp::eDontCare, // No Stencils
+        vk::ImageLayout::eUndefined, // Initial Layout
+        vk::ImageLayout::eColorAttachmentOptimal // Final Layout
+    );
+
+    vk::AttachmentReference attachment_reference(
+        0, // attachments[0]
+        vk::ImageLayout::eColorAttachmentOptimal // Image Layout
+    );
+
+    std::vector<vk::SubpassDescription> subpasses = {
+        vk::SubpassDescription(
+            vk::SubpassDescriptionFlags(), // No Flags
+            vk::PipelineBindPoint::eGraphics, // Type
+            0, nullptr, // No Inputs
+            1, &attachment_reference, // Color Attachment References
+            nullptr, nullptr, // No Resolve or Depth/Stencil for now
+            0, nullptr // Vulkan Book says you don't need this for a Color Attachment?
+        )
+    };
+
+    vk::RenderPassCreateInfo renderpass_info(
+        vk::RenderPassCreateFlags(), // No Flags
+        1, &attachment_description, // Attachments
+        subpasses.size(), subpasses.data(), // Subpasses
+        0, nullptr // Dependencies
+    );
+
+    state.renderpass = state.device.createRenderPass(renderpass_info, nullptr);
+    if (!state.renderpass) {
+            LOG_ERROR("Failed to create Vulkan gui renderpass.");
+        return false;
+    }
+
+    // Create Framebuffer
+    for (uint32_t a = 0; a < 2; a++) {
+        vk::FramebufferCreateInfo framebuffer_info(
+            vk::FramebufferCreateFlags(), // No Flags
+            state.renderpass, // Renderpass
+            1, &state.swapchain_views[a], // Attachments
+            state.swapchain_width, state.swapchain_height, // Size
+            1 // Layers
+        );
+
+        state.framebuffers[a] = state.device.createFramebuffer(framebuffer_info, nullptr);
     }
 
     return true;
