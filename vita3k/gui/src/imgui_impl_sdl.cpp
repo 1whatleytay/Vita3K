@@ -93,6 +93,7 @@ IMGUI_API void ImGui_ImplSdl_NewFrame(ImGui_State *state) {
     // Start the frame. This call will update the io.WantCaptureMouse, io.WantCaptureKeyboard flag that you can use to dispatch inputs (or not) to your application.
     ImGui::NewFrame();
 }
+
 IMGUI_API void ImGui_ImplSdl_RenderDrawData(ImGui_State *state) {
     switch (state->renderer->current_backend) {
     case renderer::Backend::OpenGL:
@@ -101,6 +102,9 @@ IMGUI_API void ImGui_ImplSdl_RenderDrawData(ImGui_State *state) {
     case renderer::Backend::Vulkan:
         return ImGui_ImplSdlVulkan_RenderDrawData(dynamic_cast<ImGui_VulkanState &>(*state));
 #endif
+    default:
+        LOG_ERROR("Missing ImGui render draw data for backend {}.", static_cast<int>(state->renderer->current_backend));
+        break;
     }
 }
 
@@ -162,7 +166,8 @@ IMGUI_API void ImGui_ImplSdl_GetDrawableSize(ImGui_State *state, int &width, int
         break;
 #endif
     default:
-        LOG_ERROR("Missing ImGui init for backend {}.", static_cast<int>(state->renderer->current_backend));
+        LOG_ERROR("Missing ImGui drawable size for backend {}.", static_cast<int>(state->renderer->current_backend));
+        break;
     }
 }
 
@@ -175,7 +180,8 @@ IMGUI_API ImTextureID ImGui_ImplSdl_CreateTexture(ImGui_State *state, void *data
         return ImGui_ImplSdlVulkan_CreateTexture(dynamic_cast<ImGui_VulkanState &>(*state), data, width, height);
 #endif
     default:
-        LOG_ERROR("Missing ImGui init for backend {}.", static_cast<int>(state->renderer->current_backend));
+        LOG_ERROR("Missing ImGui create texture for backend {}.", static_cast<int>(state->renderer->current_backend));
+        break;
     }
 }
 
@@ -188,7 +194,8 @@ IMGUI_API void ImGui_ImplSdl_DeleteTexture(ImGui_State *state, ImTextureID textu
         return ImGui_ImplSdlVulkan_DeleteTexture(dynamic_cast<ImGui_VulkanState &>(*state), texture);
 #endif
     default:
-        LOG_ERROR("Missing ImGui init for backend {}.", static_cast<int>(state->renderer->current_backend));
+        LOG_ERROR("Missing ImGui delete texture for backend {}.", static_cast<int>(state->renderer->current_backend));
+        break;
     }
 }
 
@@ -203,6 +210,7 @@ IMGUI_API void ImGui_ImplSdl_InvalidateDeviceObjects(ImGui_State *state) {
 #endif
     default:
         LOG_ERROR("Missing ImGui init for backend {}.", static_cast<int>(state->renderer->current_backend));
+        break;
     }
 }
 IMGUI_API bool ImGui_ImplSdl_CreateDeviceObjects(ImGui_State *state) {

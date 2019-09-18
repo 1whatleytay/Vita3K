@@ -18,9 +18,14 @@
 #include "interface.h"
 
 #include <app/functions.h>
-#include <app/screen_render.h>
+#include <app/gl_screen_rendererer.h>
+#ifdef USE_VULKAN
+#include <app/vulkan_screen_renderer.h>
+#endif
+#include <app/screen_rendererer.h>
 #include <config/functions.h>
 #include <config/version.h>
+#include <gui/imgui_impl_sdl.h>
 #include <gui/functions.h>
 #include <gui/state.h>
 #include <renderer/functions.h>
@@ -110,6 +115,29 @@ int main(int argc, char *argv[]) {
         return HostInitFailed;
     }
 
+    std::unique_ptr<app::screen_renderer> screen_renderer;
+
+    switch (host.renderer->current_backend) {
+#ifdef USE_VULKAN
+    case renderer::Backend::Vulkan:
+        screen_renderer.reset(reinterpret_cast<app::screen_renderer *>(
+            new app::vulkan_screen_renderer(
+                host.window.get(), reinterpret_cast<renderer::vulkan::VulkanState &>(*host.renderer))));
+        break;
+#endif
+    case renderer::Backend::OpenGL:
+        screen_renderer.reset(reinterpret_cast<app::screen_renderer *>(
+            new app::gl_screen_renderer(
+                host.window.get())));
+        break;
+    default:
+        LOG_ERROR("Unsupported backend for screen renderer.");
+        return RendererInitFailed;
+    }
+
+    if (!screen_renderer->init(host.base_path))
+        return RendererInitFailed;
+
     GuiState gui;
     gui::init(gui, host);
 
@@ -118,6 +146,7 @@ int main(int argc, char *argv[]) {
     // Application not provided via argument, show game selector
     while (run_type == app::AppRunType::Unknown) {
         if (handle_events(host, gui)) {
+            screen_renderer->begin_render();
             gui::draw_begin(gui, host);
 
 #if DISCORD_RPC
@@ -127,6 +156,9 @@ int main(int argc, char *argv[]) {
             gui::draw_game_selector(gui, host);
 
             gui::draw_end(gui, host.window.get());
+
+            ImGui_ImplSdl_RenderDrawData(gui.imgui_state.get());
+            screen_renderer->end_render();
         } else {
             return QuitRequested;
         }
@@ -144,19 +176,13 @@ int main(int argc, char *argv[]) {
     if (const auto err = run_app(host, entry_point) != Success)
         return err;
 
-    gui.imgui_state->do_clear_screen = false;
-
-    app::gl_screen_renderer gl_renderer;
-
-    if (!gl_renderer.init(host.base_path))
-        return RendererInitFailed;
-
     while (handle_events(host, gui)) {
         // Driver acto!
+        screen_renderer->begin_render();
         renderer::process_batches(*host.renderer.get(), host.renderer->features, host.mem, host.cfg, host.base_path.c_str(),
             host.io.title_id.c_str());
 
-        gl_renderer.render(host);
+        screen_renderer->render(host);
 
         // Calculate FPS
         app::calculate_fps(host);
@@ -174,6 +200,7 @@ int main(int argc, char *argv[]) {
 
         host.display.condvar.notify_all();
         gui::draw_end(gui, host.window.get());
+        screen_renderer->end_render();
         app::set_window_title(host);
     }
 

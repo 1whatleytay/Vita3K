@@ -17,20 +17,30 @@
 
 #pragma once
 
-#include <renderer/types.h>
+#include <glutil/shader.h>
 
-#include <vk_mem_alloc.h>
-#include <vulkan/vulkan.hpp>
+struct HostState;
 
-namespace renderer::vulkan {
-struct VulkanContext : renderer::Context {
-    // GXM Context Info
+namespace app {
+class screen_renderer {
+public:
+    virtual ~screen_renderer() = default;
+
+    virtual bool init(const std::string &base_path) = 0;
+    virtual void render(const HostState &state) = 0;
+
+    virtual void begin_render() = 0;
+    virtual void end_render() = 0;
+
+protected:
+    struct screen_vertex {
+        GLfloat pos[3];
+        GLfloat uv[2];
+    };
+
+    static constexpr size_t screen_vertex_size = sizeof(screen_vertex);
+    static constexpr uint32_t screen_vertex_count = 4;
+
+    using screen_vertices_t = screen_vertex[screen_vertex_count];
 };
-
-// This is seperated because I use similar objects a lot and it is getting irritating to type.
-const vk::ImageSubresourceRange base_subresource_range = vk::ImageSubresourceRange(
-    vk::ImageAspectFlagBits::eColor, // Aspect
-    0, 1, // Level Range
-    0, 1 // Layer Range
-);
-} // namespace renderer::vulkan
+} // namespace app

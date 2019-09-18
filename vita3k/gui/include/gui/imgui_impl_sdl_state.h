@@ -20,7 +20,6 @@ struct ImGui_State {
     SDL_Cursor *mouse_cursors[ImGuiMouseCursor_COUNT] = { nullptr };
 
     bool init = false;
-    bool do_clear_screen = true;
 
     virtual ~ImGui_State() = default;
 };

@@ -25,9 +25,7 @@
 
 #include <SDL_vulkan.h>
 
-// Setting a default value for now.
-// In the future, it might be a good idea to take the host's device memory into account.
-constexpr static size_t private_allocation_size = MB(1);
+#define VULKAN_NO_VALIDATION_LAYERS
 
 // Some random number as value. It will likely be very different. There are probably SCE feilds for this, I will look later.
 constexpr static uint32_t max_sets = 192;
@@ -61,7 +59,7 @@ const char *get_surface_extension() {
 #endif
 
 const static std::vector<const char *> instance_layers = {
-#ifndef NDEBUG
+#if !defined(NDEBUG) && !defined(VULKAN_NO_VALIDATION_LAYERS)
     "VK_LAYER_LUNARG_standard_validation",
 #endif
 };
@@ -96,7 +94,7 @@ const static std::vector<vk::DescriptorPoolSize> descriptor_pool_sizes = {
 };
 
 const static std::vector<vk::Format> acceptable_surface_formats = {
-    vk::Format::eB8G8R8A8Unorm, // Molten VK
+    vk::Format::eB8G8R8A8Unorm,
 };
 
 namespace renderer::vulkan {
@@ -170,6 +168,30 @@ static vk::Format select_surface_format(std::vector<vk::SurfaceFormatKHR> &forma
     assert(false);
 
     return vk::Format::eR8G8B8A8Unorm;
+}
+
+vk::ShaderModule load_shader(VulkanState &state, const std::string &path) {
+    std::ifstream file(path, std::ios::binary | std::ios::ate);
+    if (!file.good()) {
+        LOG_ERROR("Could not find shader SPIR-V at `{}`.", path);
+        return vk::ShaderModule();
+    }
+    std::vector<char> shader_data(file.tellg());
+    file.seekg(0, std::ios::beg);
+
+    file.read(shader_data.data(), shader_data.size());
+    file.close();
+
+    vk::ShaderModuleCreateInfo shader_info(
+        vk::ShaderModuleCreateFlags(), // No Flags
+        shader_data.size(), reinterpret_cast<uint32_t *>(shader_data.data()) // Code
+    );
+
+    vk::ShaderModule module = state.device.createShaderModule(shader_info, nullptr);
+    if (!module)
+        LOG_ERROR("Could not build Vulkan shader module from SPIR-V at `{}`.", path);
+
+    return module;
 }
 
 vk::Queue select_queue(VulkanState &state, CommandType type) {
@@ -576,8 +598,6 @@ bool create(const WindowPtr &window, std::unique_ptr<renderer::State> &state) {
             LOG_ERROR("Failed to create transfer command pool.");
             return false;
         }
-
-        vulkan_state.general_command_buffer = create_command_buffer(vulkan_state, CommandType::General);
     }
 
     // Allocate Memory for Images and Buffers
@@ -621,8 +641,6 @@ void close(std::unique_ptr<renderer::State> &state) {
 
     vulkan_state.device.destroy(vulkan_state.swapchain);
     vulkan_state.instance.destroy(vulkan_state.surface);
-
-    free_command_buffer(vulkan_state, CommandType::General, vulkan_state.general_command_buffer);
 
     vulkan_state.device.destroy(vulkan_state.general_command_pool);
     vulkan_state.device.destroy(vulkan_state.transfer_command_pool);

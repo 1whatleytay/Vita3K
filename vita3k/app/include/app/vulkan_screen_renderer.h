@@ -17,20 +17,40 @@
 
 #pragma once
 
-#include <renderer/types.h>
+#include <app/screen_rendererer.h>
 
 #include <vk_mem_alloc.h>
 #include <vulkan/vulkan.hpp>
 
+struct SDL_Window;
 namespace renderer::vulkan {
-struct VulkanContext : renderer::Context {
-    // GXM Context Info
-};
+struct VulkanState;
+}
 
-// This is seperated because I use similar objects a lot and it is getting irritating to type.
-const vk::ImageSubresourceRange base_subresource_range = vk::ImageSubresourceRange(
-    vk::ImageAspectFlagBits::eColor, // Aspect
-    0, 1, // Level Range
-    0, 1 // Layer Range
-);
-} // namespace renderer::vulkan
+namespace app {
+class vulkan_screen_renderer : screen_renderer {
+public:
+    explicit vulkan_screen_renderer(SDL_Window *window, renderer::vulkan::VulkanState &renderer);
+    ~vulkan_screen_renderer() override;
+
+    bool init(const std::string &base_path) override;
+    void render(const HostState &state) override;
+
+    void begin_render() override;
+    void end_render() override;
+
+private:
+    renderer::vulkan::VulkanState &renderer;
+    SDL_Window *window;
+
+    vk::ShaderModule vertex_module;
+    vk::ShaderModule fragment_module;
+
+    VmaAllocation buffer_allocation;
+    vk::Buffer buffer;
+
+    VmaAllocation screen_allocation;
+    vk::Image screen_image;
+    vk::ImageView screen_view;
+};
+}

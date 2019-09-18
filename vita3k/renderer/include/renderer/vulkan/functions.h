@@ -36,6 +36,8 @@ enum class MemoryType {
     Device,
 };
 
+vk::ShaderModule load_shader(VulkanState &state, const std::string &path);
+
 vk::Queue select_queue(VulkanState &state, CommandType type);
 
 bool resize_swapchain(VulkanState &state, vk::Extent2D size);

@@ -15,14 +15,26 @@
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-#include <app/screen_render.h>
+#include <app/gl_screen_rendererer.h>
 
 #include <host/state.h>
 #include <util/log.h>
 
-#include <SDL_video.h>
+#include <SDL.h>
 
 namespace app {
+gl_screen_renderer::gl_screen_renderer(SDL_Window *window) : window(window) { }
+
+gl_screen_renderer::~gl_screen_renderer() {
+    glDeleteBuffers(1, &m_vbo);
+    m_vbo = 0;
+
+    glDeleteVertexArrays(1, &m_vao);
+    m_vao = 0;
+
+    glDeleteTextures(1, &m_screen_texture);
+    m_screen_texture = 0;
+}
 
 bool gl_screen_renderer::init(const std::string &base_path) {
     glGenTextures(1, &m_screen_texture);
@@ -38,7 +50,7 @@ bool gl_screen_renderer::init(const std::string &base_path) {
     glGenVertexArrays(1, &m_vao);
     glBindVertexArray(m_vao);
 
-    static const screen_vertices_t vertex_buffer_data = {
+    const screen_vertices_t vertex_buffer_data = {
         { { -1.f, -1.f, 0.0f }, { 0.f, 1.f } },
         { { 1.f, -1.f, 0.0f }, { 1.f, 1.f } },
         { { 1.f, 1.f, 0.0f }, { 1.f, 0.f } },
@@ -103,8 +115,6 @@ void gl_screen_renderer::render(const HostState &host) {
 
     glViewport(static_cast<GLint>(host.viewport_pos.x), static_cast<GLint>(host.viewport_pos.y), static_cast<GLsizei>(host.viewport_size.x),
         static_cast<GLsizei>(host.viewport_size.y));
-
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     if ((display.image_size.x > 0) && (display.image_size.y > 0)) {
         glUseProgram(*m_render_shader);
@@ -171,19 +181,11 @@ void gl_screen_renderer::render(const HostState &host) {
     glViewport(last_viewport[0], last_viewport[1], (GLsizei)last_viewport[2], (GLsizei)last_viewport[3]);
 }
 
-void gl_screen_renderer::destroy() {
-    glDeleteBuffers(1, &m_vbo);
-    m_vbo = 0;
-
-    glDeleteVertexArrays(1, &m_vao);
-    m_vao = 0;
-
-    glDeleteTextures(1, &m_screen_texture);
-    m_screen_texture = 0;
+void gl_screen_renderer::begin_render() {
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 
-gl_screen_renderer::~gl_screen_renderer() {
-    destroy();
+void gl_screen_renderer::end_render() {
+    SDL_GL_SwapWindow(window);
 }
-
 } // namespace app

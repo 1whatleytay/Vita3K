@@ -52,7 +52,7 @@ struct VulkanState : public renderer::State {
     // Transfer pool has transient bit set.
     vk::CommandPool transfer_command_pool;
 
-    vk::CommandBuffer general_command_buffer;
+    vk::CommandBuffer render_command_buffer;
 
     vk::SurfaceKHR surface;
     vk::SwapchainKHR swapchain;
@@ -64,5 +64,11 @@ struct VulkanState : public renderer::State {
 
     vk::RenderPass renderpass;
     vk::Framebuffer framebuffers[2];
+
+    bool needs_resize = false;
+    uint32_t image_index = ~0u;
+
+    vk::Semaphore image_acquired_semaphore;
+    vk::Semaphore render_complete_semaphore;
 };
 } // namespace renderer::vulkan

@@ -17,40 +17,31 @@
 
 #pragma once
 
-#include <glutil/shader.h>
+#include <app/screen_rendererer.h>
 
-struct HostState;
+struct SDL_Window;
 
 namespace app {
-
-class gl_screen_renderer {
+class gl_screen_renderer : screen_renderer {
 public:
-    gl_screen_renderer() {}
-    ~gl_screen_renderer();
+    explicit gl_screen_renderer(SDL_Window *window);
+    ~gl_screen_renderer() override;
 
-    bool init(const std::string &base_path);
-    void render(const HostState &state);
-    void destroy();
+    bool init(const std::string &base_path) override;
+    void render(const HostState &state) override;
 
-private:
-    struct screen_vertex {
-        GLfloat pos[3];
-        GLfloat uv[2];
-    };
-
-    static constexpr size_t screen_vertex_size = sizeof(screen_vertex);
-    static constexpr uint32_t screen_vertex_count = 4;
-
-    using screen_vertices_t = screen_vertex[screen_vertex_count];
+    void begin_render() override;
+    void end_render() override;
 
 private:
-    GLuint m_vao{ 0 };
-    GLuint m_vbo{ 0 };
+    SDL_Window *window{};
+
+    GLuint m_vao{0};
+    GLuint m_vbo{0};
     SharedGLObject m_render_shader;
-    GLuint m_screen_texture{ 0 };
+    GLuint m_screen_texture{0};
 
-    GLint posAttrib;
-    GLint uvAttrib;
+    GLint posAttrib{0};
+    GLint uvAttrib{0};
 };
-
-} // namespace app
+}

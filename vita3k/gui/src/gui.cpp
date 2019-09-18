@@ -285,7 +285,6 @@ void draw_end(GuiState &gui, SDL_Window *window) {
 
     ImGui::Render();
     ImGui_ImplSdl_RenderDrawData(gui.imgui_state.get());
-    SDL_GL_SwapWindow(window);
 }
 
 void draw_ui(GuiState &gui, HostState &host) {
