@@ -17,13 +17,24 @@
 
 #pragma once
 
-#include "state.h"
+#include <renderer/vulkan/state.h>
+
+namespace emu {
+struct SceGxmBlendInfo;
+}
 
 namespace renderer::vulkan {
-#define VULKAN_CHECK(a) assert(a == vk::Result::eSuccess)
+void bind_context(State &state, Context &context, RenderTarget &render_target);
 
-bool create(const WindowPtr &window, std::unique_ptr<renderer::State> &state);
-void close(std::unique_ptr<renderer::State> &state);
+bool create(const WindowPtr &window, std::unique_ptr<State> &state);
+bool create(State &state, std::unique_ptr<Context> &context);
+bool create(State &state, std::unique_ptr<RenderTarget> &render_target,
+    const SceGxmRenderTargetParams &params);
+bool create(State &state, std::unique_ptr<VertexProgram> &vp, const SceGxmProgram &program,
+    GXPPtrMap &gxp_ptr_map, const char *base_path, const char *title_id);
+bool create(State &state, std::unique_ptr<FragmentProgram> &fp, const SceGxmProgram &program,
+    const emu::SceGxmBlendInfo *blend, GXPPtrMap &gxp_ptr_map, const char *base_path, const char *title_id);
+void close(std::unique_ptr<State> &state);
 
 // I think I will drop this approach but this is fine for now.
 enum class CommandType {
@@ -49,4 +60,4 @@ vk::Buffer create_buffer(VulkanState &state, const vk::BufferCreateInfo &buffer_
 void destroy_buffer(VulkanState &state, vk::Buffer buffer, VmaAllocation allocation);
 vk::Image create_image(VulkanState &state, const vk::ImageCreateInfo &image_info, MemoryType type, VmaAllocation &allocation);
 void destroy_image(VulkanState &state, vk::Image image, VmaAllocation allocation);
-} // namespace renderer::vulkan
+} // namespace vulkan

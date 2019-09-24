@@ -27,6 +27,14 @@ struct VulkanContext : renderer::Context {
     // GXM Context Info
 };
 
+struct VulkanRenderTarget : renderer::RenderTarget {
+    vk::RenderPass renderpass;
+    VmaAllocation allocations[2];
+    vk::Image images[2];
+    vk::ImageView views[2];
+    vk::Framebuffer framebuffers[2];
+};
+
 // This is seperated because I use similar objects a lot and it is getting irritating to type.
 const vk::ImageSubresourceRange base_subresource_range = vk::ImageSubresourceRange(
     vk::ImageAspectFlagBits::eColor, // Aspect

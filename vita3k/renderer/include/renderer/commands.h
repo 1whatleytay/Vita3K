@@ -26,8 +26,8 @@
 struct GxmContextState;
 
 namespace renderer {
-#define REPORT_MISSING(backend) //LOG_ERROR("Unimplemented graphics API handler with backend {}", (int)backend)
-#define REPORT_STUBBED() //LOG_INFO("Stubbed")
+#define REPORT_MISSING(backend) { LOG_ERROR("Unimplemented graphics API handler with backend {}", (int)backend); assert(false); }
+#define REPORT_STUBBED() LOG_INFO("Stubbed")
 
 struct Context;
 struct State;
@@ -73,10 +73,11 @@ enum class CommandOpcode : std::uint16_t {
     DestroyRenderTarget = 10
 };
 
-enum CommandErrorCode {
-    CommandErrorCodeNone = 0,
-    CommandErrorCodePending = -1,
-    CommandErrorArgumentsTooLarge = -2
+enum class CommandErrorCode {
+    None = 0,
+    Pending = -1,
+    ArgumentsTooLarge = -2,
+    CreationFailure = -3,
 };
 
 constexpr std::size_t MAX_COMMAND_DATA_SIZE = 0x40;
@@ -84,7 +85,7 @@ constexpr std::size_t MAX_COMMAND_DATA_SIZE = 0x40;
 struct Command {
     CommandOpcode opcode;
     std::uint8_t data[MAX_COMMAND_DATA_SIZE];
-    int *status;
+    CommandErrorCode *status;
 
     Command *next;
 };
@@ -134,7 +135,7 @@ struct CommandHelper {
         return *data;
     }
 
-    void complete(const int code) {
+    void complete(const CommandErrorCode code) {
         *cmd->status = code;
     }
 };
@@ -153,7 +154,7 @@ bool do_command_push_data(CommandHelper &helper, Head arg1, Args... args2) {
 }
 
 template <typename... Args>
-Command *make_command(const CommandOpcode opcode, int *status, Args... arguments) {
+Command *make_command(const CommandOpcode opcode, CommandErrorCode *status, Args... arguments) {
     Command *new_command = new Command;
     new_command->opcode = opcode;
     new_command->status = status;
@@ -171,5 +172,5 @@ Command *make_command(const CommandOpcode opcode, int *status, Args... arguments
     return new_command;
 }
 
-void complete_command(State &state, CommandHelper &helper, const int code);
+void complete_command(State &state, CommandHelper &helper, const CommandErrorCode code);
 } // namespace renderer

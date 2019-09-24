@@ -213,12 +213,13 @@ COMMAND_SET_STATE(polygon_mode) {
 
     switch (renderer.current_backend) {
     case Backend::OpenGL: {
-        if (is_front)
+        if (is_front) {
             gl::sync_front_polygon_mode(*state);
-        else
-            // LOG_WARN("Unhandle set back polygon mode for OpenGL backend");
+        } else {
+            LOG_WARN("Unhandled set back polygon mode for OpenGL backend");
+        }
 
-            break;
+        break;
     }
 
     default:

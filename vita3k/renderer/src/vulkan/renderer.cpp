@@ -21,11 +21,10 @@
 #include <renderer/vulkan/state.h>
 
 #include <config/version.h>
-#include <util/log.h>
 
 #include <SDL_vulkan.h>
 
-#define VULKAN_NO_VALIDATION_LAYERS
+//#define VULKAN_NO_VALIDATION_LAYERS
 
 // Some random number as value. It will likely be very different. There are probably SCE feilds for this, I will look later.
 constexpr static uint32_t max_sets = 192;
@@ -170,30 +169,6 @@ static vk::Format select_surface_format(std::vector<vk::SurfaceFormatKHR> &forma
     return vk::Format::eR8G8B8A8Unorm;
 }
 
-vk::ShaderModule load_shader(VulkanState &state, const std::string &path) {
-    std::ifstream file(path, std::ios::binary | std::ios::ate);
-    if (!file.good()) {
-        LOG_ERROR("Could not find shader SPIR-V at `{}`.", path);
-        return vk::ShaderModule();
-    }
-    std::vector<char> shader_data(file.tellg());
-    file.seekg(0, std::ios::beg);
-
-    file.read(shader_data.data(), shader_data.size());
-    file.close();
-
-    vk::ShaderModuleCreateInfo shader_info(
-        vk::ShaderModuleCreateFlags(), // No Flags
-        shader_data.size(), reinterpret_cast<uint32_t *>(shader_data.data()) // Code
-    );
-
-    vk::ShaderModule module = state.device.createShaderModule(shader_info, nullptr);
-    if (!module)
-        LOG_ERROR("Could not build Vulkan shader module from SPIR-V at `{}`.", path);
-
-    return module;
-}
-
 vk::Queue select_queue(VulkanState &state, CommandType type) {
     vk::Queue queue;
 
@@ -310,21 +285,19 @@ bool resize_swapchain(VulkanState &state, vk::Extent2D size) {
         vk::ImageLayout::eColorAttachmentOptimal // Image Layout
     );
 
-    std::vector<vk::SubpassDescription> subpasses = {
-        vk::SubpassDescription(
-            vk::SubpassDescriptionFlags(), // No Flags
-            vk::PipelineBindPoint::eGraphics, // Type
-            0, nullptr, // No Inputs
-            1, &attachment_reference, // Color Attachment References
-            nullptr, nullptr, // No Resolve or Depth/Stencil for now
-            0, nullptr // Vulkan Book says you don't need this for a Color Attachment?
-        )
-    };
+    vk::SubpassDescription subpass(
+        vk::SubpassDescriptionFlags(), // No Flags
+        vk::PipelineBindPoint::eGraphics, // Type
+        0, nullptr, // No Inputs
+        1, &attachment_reference, // Color Attachment References
+        nullptr, nullptr, // No Resolve or Depth/Stencil for now
+        0, nullptr // Vulkan Book says you don't need this for a Color Attachment?
+    );
 
     vk::RenderPassCreateInfo renderpass_info(
         vk::RenderPassCreateFlags(), // No Flags
         1, &attachment_description, // Attachments
-        subpasses.size(), subpasses.data(), // Subpasses
+        1, &subpass, // Subpasses
         0, nullptr // Dependencies
     );
 
@@ -350,122 +323,8 @@ bool resize_swapchain(VulkanState &state, vk::Extent2D size) {
     return true;
 }
 
-vk::CommandBuffer create_command_buffer(VulkanState &state, CommandType type) {
-    vk::CommandBuffer buffer;
+void bind_context(State &state, Context &context, RenderTarget &render_target) {
 
-    switch (type) {
-    case CommandType::General: {
-        vk::CommandBufferAllocateInfo command_buffer_info(
-            state.general_command_pool, // Command Pool
-            vk::CommandBufferLevel::ePrimary, // Level
-            1 // Count
-        );
-
-        state.device.allocateCommandBuffers(&command_buffer_info, &buffer);
-        break;
-    }
-    case CommandType::Transfer: {
-        vk::CommandBufferAllocateInfo command_buffer_info(
-            state.transfer_command_pool, // Command Pool
-            vk::CommandBufferLevel::ePrimary, // Level
-            1 // Count
-        );
-
-        state.device.allocateCommandBuffers(&command_buffer_info, &buffer);
-        break;
-    }
-    }
-
-    assert(buffer);
-
-    return buffer;
-}
-
-void free_command_buffer(VulkanState &state, CommandType type, vk::CommandBuffer buffer) {
-    vk::CommandPool pool;
-
-    switch (type) {
-    case CommandType::General:
-        pool = state.general_command_pool;
-        break;
-    case CommandType::Transfer:
-        pool = state.transfer_command_pool;
-        break;
-    }
-
-    state.device.freeCommandBuffers(pool, 1, &buffer);
-}
-
-vk::Buffer create_buffer(VulkanState &state, const vk::BufferCreateInfo &buffer_info, MemoryType type, VmaAllocation &allocation) {
-    VmaMemoryUsage memory_usage;
-    switch (type) {
-    case MemoryType::Mappable:
-        memory_usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
-        break;
-    case MemoryType::Device:
-        memory_usage = VMA_MEMORY_USAGE_GPU_ONLY;
-        break;
-    }
-
-    VmaAllocationCreateInfo allocation_info = {};
-    allocation_info.flags = 0;
-    allocation_info.usage = memory_usage;
-    // Usage is specified via usage field. Others are ignored.
-    allocation_info.requiredFlags = 0;
-    allocation_info.preferredFlags = 0;
-    allocation_info.memoryTypeBits = 0;
-    allocation_info.pool = VK_NULL_HANDLE;
-    allocation_info.pUserData = nullptr;
-
-    VkBuffer buffer;
-    VkResult result = vmaCreateBuffer(state.allocator,
-        reinterpret_cast<const VkBufferCreateInfo *>(&buffer_info),
-        &allocation_info, &buffer, &allocation, nullptr);
-    assert(result == VK_SUCCESS);
-    assert(allocation != VK_NULL_HANDLE);
-    assert(buffer != VK_NULL_HANDLE);
-
-    return buffer;
-}
-
-void destroy_buffer(VulkanState &state, vk::Buffer buffer, VmaAllocation allocation) {
-    vmaDestroyBuffer(state.allocator, buffer, allocation);
-}
-
-vk::Image create_image(VulkanState &state, const vk::ImageCreateInfo &image_info, MemoryType type, VmaAllocation &allocation) {
-    VmaMemoryUsage memory_usage;
-    switch (type) {
-    case MemoryType::Mappable:
-        memory_usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
-        break;
-    case MemoryType::Device:
-        memory_usage = VMA_MEMORY_USAGE_GPU_ONLY;
-        break;
-    }
-
-    VmaAllocationCreateInfo allocation_info = {};
-    allocation_info.flags = 0;
-    allocation_info.usage = memory_usage;
-    // Usage is specified via usage field. Others are ignored.
-    allocation_info.requiredFlags = 0;
-    allocation_info.preferredFlags = 0;
-    allocation_info.memoryTypeBits = 0;
-    allocation_info.pool = VK_NULL_HANDLE;
-    allocation_info.pUserData = nullptr;
-
-    VkImage image;
-    VkResult result = vmaCreateImage(state.allocator,
-        reinterpret_cast<const VkImageCreateInfo *>(&image_info),
-        &allocation_info, &image, &allocation, nullptr);
-    assert(result == VK_SUCCESS);
-    assert(allocation != VK_NULL_HANDLE);
-    assert(image != VK_NULL_HANDLE);
-
-    return image;
-}
-
-void destroy_image(VulkanState &state, vk::Image image, VmaAllocation allocation) {
-    vmaDestroyImage(state.allocator, image, allocation);
 }
 
 bool create(const WindowPtr &window, std::unique_ptr<renderer::State> &state) {
@@ -647,5 +506,95 @@ void close(std::unique_ptr<renderer::State> &state) {
 
     vulkan_state.device.destroy();
     vulkan_state.instance.destroy();
+}
+
+bool create(renderer::State &state, std::unique_ptr<renderer::Context> &context) {
+    context = std::make_unique<VulkanContext>();
+
+    return true;
+}
+
+bool create(renderer::State &state, std::unique_ptr<renderer::RenderTarget> &render_target,
+    const SceGxmRenderTargetParams &params) {
+    render_target = std::make_unique<VulkanRenderTarget>();
+    auto *target = reinterpret_cast<VulkanRenderTarget *>(render_target.get());
+    auto &vulkan = dynamic_cast<VulkanState &>(state);
+
+    vk::AttachmentDescription attachment_description(
+        vk::AttachmentDescriptionFlags(),
+        vk::Format::eR8G8B8A8Unorm,
+        vk::SampleCountFlagBits::e1,
+        vk::AttachmentLoadOp::eClear,
+        vk::AttachmentStoreOp::eStore,
+        vk::AttachmentLoadOp::eDontCare,
+        vk::AttachmentStoreOp::eDontCare,
+        vk::ImageLayout::eUndefined,
+        vk::ImageLayout::eColorAttachmentOptimal);
+
+    vk::AttachmentReference attachment_refernece(1, vk::ImageLayout::eColorAttachmentOptimal);
+
+    vk::SubpassDescription subpass(
+        vk::SubpassDescriptionFlags(),
+        vk::PipelineBindPoint::eGraphics,
+        0, nullptr,
+        1, &attachment_refernece,
+        nullptr, nullptr,
+        0, nullptr);
+
+    vk::RenderPassCreateInfo renderpass_info(
+        vk::RenderPassCreateFlags(),
+        1, &attachment_description,
+        1, &subpass,
+        0, nullptr);
+
+    target->renderpass = vulkan.device.createRenderPass(renderpass_info);
+
+    for (uint32_t a = 0; a < 2; a++) {
+        vk::ImageCreateInfo image_info(
+            vk::ImageCreateFlags(),
+            vk::ImageType::e2D,
+            vk::Format::eR8G8B8A8Unorm,
+            vk::Extent3D(params.width, params.height, 1),
+            1, 1,
+            vk::SampleCountFlagBits::e1, // No Multisampling...
+            vk::ImageTiling::eOptimal,
+            vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferSrc,
+            vk::SharingMode::eExclusive, 0, nullptr,
+            vk::ImageLayout::eUndefined);
+
+        target->images[a] = create_image(vulkan, image_info, MemoryType::Device, target->allocations[a]);
+
+        vk::ImageViewCreateInfo view_info(
+            vk::ImageViewCreateFlags(),
+            target->images[a],
+            vk::ImageViewType::e2D,
+            vk::Format::eR8G8B8A8Unorm,
+            vk::ComponentMapping(),
+            base_subresource_range);
+
+        target->views[a] = vulkan.device.createImageView(view_info);
+
+        vk::FramebufferCreateInfo framebuffer_info(
+            vk::FramebufferCreateFlags(),
+            target->renderpass,
+            1, &target->views[a],
+            params.width, params.height, 1);
+
+        target->framebuffers[a] = vulkan.device.createFramebuffer(framebuffer_info);
+    }
+
+    return true;
+}
+
+bool create(renderer::State &state, std::unique_ptr<VertexProgram> &vp, const SceGxmProgram &program,
+    GXPPtrMap &gxp_ptr_map, const char *base_path, const char *title_id) {
+
+    return true;
+}
+
+bool create(renderer::State &state, std::unique_ptr<FragmentProgram> &fp, const SceGxmProgram &program,
+    const emu::SceGxmBlendInfo *blend, GXPPtrMap &gxp_ptr_map, const char *base_path, const char *title_id) {
+
+    return true;
 }
 } // namespace renderer::vulkan

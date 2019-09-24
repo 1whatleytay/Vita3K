@@ -44,13 +44,20 @@ COMMAND(handle_create_context) {
         break;
     }
 
+#ifdef USE_VULKAN
+    case Backend::Vulkan: {
+        result = vulkan::create(renderer, *ctx);
+        break;
+    }
+#endif
+
     default: {
         REPORT_MISSING(renderer.current_backend);
         break;
     }
     }
 
-    complete_command(renderer, helper, result);
+    complete_command(renderer, helper, result ? CommandErrorCode::None : CommandErrorCode::CreationFailure);
 }
 
 COMMAND(handle_create_render_target) {
@@ -65,20 +72,27 @@ COMMAND(handle_create_render_target) {
         break;
     }
 
+#ifdef USE_VULKAN
+    case Backend::Vulkan: {
+        result = vulkan::create(renderer, *render_target, *params);
+        break;
+    }
+#endif
+
     default: {
         REPORT_MISSING(renderer.current_backend);
         break;
     }
     }
 
-    complete_command(renderer, helper, result);
+    complete_command(renderer, helper, result ? CommandErrorCode::None : CommandErrorCode::CreationFailure);
 }
 
 COMMAND(handle_destroy_render_target) {
     std::unique_ptr<RenderTarget> *render_target = helper.pop<std::unique_ptr<RenderTarget> *>();
     render_target->reset();
 
-    complete_command(renderer, helper, 0);
+    complete_command(renderer, helper, CommandErrorCode::None);
 }
 
 // Client
@@ -87,6 +101,12 @@ bool create(std::unique_ptr<FragmentProgram> &fp, State &state, const SceGxmProg
     case Backend::OpenGL: {
         return gl::create(fp, static_cast<gl::GLState &>(state), program, blend, gxp_ptr_map, base_path, title_id);
     }
+
+#ifdef USE_VULKAN
+    case Backend::Vulkan: {
+        return vulkan::create(state, fp, program, blend, gxp_ptr_map, base_path, title_id);
+    }
+#endif
 
     default: {
         REPORT_MISSING(state.current_backend);
@@ -102,6 +122,12 @@ bool create(std::unique_ptr<VertexProgram> &vp, State &state, const SceGxmProgra
     case Backend::OpenGL: {
         return gl::create(vp, static_cast<gl::GLState &>(state), program, gxp_ptr_map, base_path, title_id);
     }
+
+#ifdef USE_VULKAN
+    case Backend::Vulkan: {
+        return vulkan::create(state, vp, program, gxp_ptr_map, base_path, title_id);
+    }
+#endif
 
     default: {
         REPORT_MISSING(state.current_backend);

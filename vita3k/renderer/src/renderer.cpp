@@ -158,14 +158,16 @@ void sync_surface_data(State &state, Context *ctx, GxmContextState *gxm_context)
 bool create_context(State &state, std::unique_ptr<Context> &context) {
     switch (state.current_backend) {
     default:
-        return renderer::send_single_command(state, nullptr, nullptr, renderer::CommandOpcode::CreateContext, &context);
+        return renderer::send_single_command(state, nullptr, nullptr, renderer::CommandOpcode::CreateContext, &context)
+            == CommandErrorCode::None;
     }
 }
 
 bool create_render_target(State &state, std::unique_ptr<RenderTarget> &rt, const SceGxmRenderTargetParams *params) {
     switch (state.current_backend) {
     default:
-        return renderer::send_single_command(state, nullptr, nullptr, renderer::CommandOpcode::CreateRenderTarget, &rt, params);
+        return renderer::send_single_command(state, nullptr, nullptr, renderer::CommandOpcode::CreateRenderTarget, &rt, params)
+            == CommandErrorCode::None;
     }
 }
 

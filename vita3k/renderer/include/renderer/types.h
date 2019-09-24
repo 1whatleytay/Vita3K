@@ -71,7 +71,7 @@ struct RenderTarget;
 struct Context {
     const RenderTarget *current_render_target{};
     CommandList command_list;
-    int render_finish_status = 0;
+    CommandErrorCode render_finish_status = CommandErrorCode::None;
 };
 
 struct ShaderProgram {

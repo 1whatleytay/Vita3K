@@ -11,7 +11,7 @@
 struct FeatureState;
 
 namespace renderer {
-void complete_command(State &state, CommandHelper &helper, const int code) {
+void complete_command(State &state, CommandHelper &helper, const CommandErrorCode code) {
     helper.complete(code);
     state.command_finish_one.notify_all();
 }

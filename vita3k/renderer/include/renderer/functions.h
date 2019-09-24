@@ -42,7 +42,7 @@ void subject_done(SceGxmSyncObject *sync_object, const SyncObjectSubject subject
  */
 void subject_in_progress(SceGxmSyncObject *sync_object, const SyncObjectSubject subjects);
 
-int wait_for_status(State &state, int *result_code);
+CommandErrorCode wait_for_status(State &state, CommandErrorCode *result_code);
 void reset_command_list(CommandList &command_list);
 void submit_command_list(State &state, renderer::Context *context, GxmContextState *gxm_context_state, CommandList &command_list);
 void process_batch(State &state, MemState &mem, Config &config, CommandList &command_list, const char *base_path, const char *title_id);
@@ -91,7 +91,7 @@ bool create_render_target(State &state, std::unique_ptr<RenderTarget> &rt, const
 void destroy_render_target(State &state, std::unique_ptr<RenderTarget> &rt);
 
 template <typename... Args>
-bool add_command(Context *ctx, const CommandOpcode opcode, int *status, Args... arguments) {
+bool add_command(Context *ctx, const CommandOpcode opcode, CommandErrorCode *status, Args... arguments) {
     auto cmd_maked = make_command(opcode, status, arguments...);
 
     if (!cmd_maked) {
@@ -115,14 +115,14 @@ bool add_state_set_command(Context *ctx, const GXMState state, Args... arguments
 }
 
 template <typename... Args>
-int send_single_command(State &state, Context *ctx, GxmContextState *gxm_state, const CommandOpcode opcode,
+CommandErrorCode send_single_command(State &state, Context *ctx, GxmContextState *gxm_state, const CommandOpcode opcode,
     Args... arguments) {
     // Make a temporary command list
-    int status = CommandErrorCodePending; // Pending.
+    CommandErrorCode status = CommandErrorCode::Pending; // Pending.
     auto cmd = make_command(opcode, &status, arguments...);
 
     if (!cmd) {
-        return CommandErrorArgumentsTooLarge;
+        return CommandErrorCode::ArgumentsTooLarge;
     }
 
     CommandList list;

@@ -672,6 +672,11 @@ static SpirvShaderParameters create_parameters(spv::Builder &b, const SceGxmProg
     for (size_t i = 0; i < program.parameter_count; ++i) {
         const SceGxmProgramParameter &parameter = gxp_parameters[i];
 
+        uint32_t category = parameter.category;
+        uint32_t type = parameter.type;
+        uint32_t components = parameter.component_count;
+        uint32_t container_index = parameter.container_index;
+
         usse::RegisterBank param_reg_type = usse::RegisterBank::PRIMATTR;
 
         switch (parameter.category) {

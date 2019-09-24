@@ -549,7 +549,7 @@ EXPORT(int, sceGxmEndScene, SceGxmContext *context, const emu::SceGxmNotificatio
     renderer::sync_surface_data(*host.renderer, context->renderer.get(), &context->state);
 
     // Add NOP for SceGxmFinish
-    context->renderer->render_finish_status = renderer::CommandErrorCodePending;
+    context->renderer->render_finish_status = renderer::CommandErrorCode::Pending;
     renderer::add_command(context->renderer.get(), renderer::CommandOpcode::Nop, &context->renderer->render_finish_status,
         (int)0);
 

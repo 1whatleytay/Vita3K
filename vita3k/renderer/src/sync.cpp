@@ -14,7 +14,7 @@ namespace renderer {
 COMMAND(handle_nop) {
     // Signal back to client
     int code_to_finish = helper.pop<int>();
-    complete_command(renderer, helper, code_to_finish);
+    complete_command(renderer, helper, static_cast<CommandErrorCode>(code_to_finish));
 }
 
 COMMAND(handle_signal_sync_object) {
@@ -28,15 +28,17 @@ void finish(State &state, Context &context) {
     wait_for_status(state, &context.render_finish_status);
 }
 
-int wait_for_status(State &state, int *result_code) {
-    if (*result_code != CommandErrorCodePending) {
+CommandErrorCode wait_for_status(State &state, CommandErrorCode *result_code) {
+    if (*result_code != CommandErrorCode::Pending) {
         // Signaled, return
         return *result_code;
     }
 
     // Wait for it to get signaled
     std::unique_lock<std::mutex> finish_mutex(state.command_finish_one_mutex);
-    state.command_finish_one.wait(finish_mutex, [&]() { return *result_code != CommandErrorCodePending; });
+    state.command_finish_one.wait(finish_mutex, [&]() {
+        return *result_code != CommandErrorCode::Pending;
+    });
 
     return *result_code;
 }

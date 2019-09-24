@@ -5,6 +5,7 @@ if (USE_VULKAN)
 		include/renderer/vulkan/functions.h
 
 		src/vulkan/renderer.cpp
+		src/vulkan/objects.cpp
 		src/vulkan/allocator.cpp
 	)
 	set(RENDERER_VULKAN_LIBRARIES vulkan vma)
