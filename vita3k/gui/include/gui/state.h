@@ -74,6 +74,7 @@ struct DebugMenuState {
 
 struct ConfigurationMenuState {
     bool settings_dialog = false;
+    int backend_renderer;
 };
 
 struct HelpMenuState {

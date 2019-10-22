@@ -271,6 +271,8 @@ void init(GuiState &gui, HostState &host) {
         const std::lock_guard<std::mutex> guard(gui.trophy_unlock_display_requests_access_mutex);
         gui.trophy_unlock_display_requests.push(std::move(callback_data));
     };
+
+    gui.configuration_menu.backend_renderer = static_cast<int>(host.renderer->current_backend);
 }
 
 void draw_begin(GuiState &gui, HostState &host) {

@@ -156,13 +156,21 @@ void draw_settings_dialog(GuiState &gui, HostState &host) {
     if (ImGui::BeginTabItem("GPU")) {
         ImGui::PopStyleColor();
 #ifdef USE_VULKAN
-        ImGui::Combo("Backend Render (Reboot for apply)", reinterpret_cast<int *>(&host.backend_renderer), "OpenGL\0Vulkan\0");
+        if (ImGui::Combo("Backend Render (Reboot for apply)",
+            &gui.configuration_menu.backend_renderer, "OpenGL\0Vulkan\0")) {
+            switch (static_cast<renderer::Backend>(gui.configuration_menu.backend_renderer)) {
+            case renderer::Backend::OpenGL:
+                host.cfg.backend_renderer = "OpenGL";
+                break;
+            case renderer::Backend::Vulkan:
+                host.cfg.backend_renderer = "Vulkan";
+                break;
+            default:
+                break;
+            }
+        }
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("Select your preferred backend render.");
-        if (static_cast<int>(host.backend_renderer) == 0 && host.cfg.backend_renderer != "OpenGL")
-            host.cfg.backend_renderer = std::string("OpenGL");
-        else if (static_cast<int>(host.backend_renderer) == 1 && host.cfg.backend_renderer != "Vulkan")
-            host.cfg.backend_renderer = std::string("Vulkan");
 #endif
         ImGui::Checkbox("Hardware Flip", &host.cfg.hardware_flip);
         if (ImGui::IsItemHovered())
