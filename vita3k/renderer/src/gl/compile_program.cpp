@@ -48,8 +48,9 @@ static SharedGLObject compile_glsl(GLenum type, const std::string &source) {
 static void bind_attribute_locations(GLuint gl_program, const GLVertexProgram &program) {
     R_PROFILE(__func__);
 
+    uint32_t id = 0;
     for (const AttributeLocations::value_type &binding : program.attribute_locations) {
-        glBindAttribLocation(gl_program, binding.first / sizeof(uint32_t), binding.second.c_str());
+        glBindAttribLocation(gl_program, id++/*binding.first / sizeof(uint32_t)*/, binding.second.c_str());
     }
 }
 
