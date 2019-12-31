@@ -240,7 +240,8 @@ EXPORT(int, sceNgsVoiceLockParams, std::uint32_t voice, std::uint32_t unk1, std:
     buffer_info->data = alloc(host.mem, 10, "SceNgs buffer stub");
     buffer_info->size = 10;
 
-    return STUBBED("Ngs buffer stubbed");
+	return -1;
+    //return STUBBED("Ngs buffer stubbed");
 }
 
 EXPORT(int, sceNgsVoicePatchSetVolume) {
