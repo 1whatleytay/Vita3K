@@ -76,6 +76,7 @@ add_library(modules STATIC
 	SceLsdb/SceLsdb.cpp SceLsdb/SceLsdb.h
 	SceMotion/SceMotion.cpp SceMotion/SceMotion.h
 	SceMotionDev/SceMotionDev.cpp SceMotionDev/SceMotionDev.h
+	SceMp4/SceMp4.cpp SceMp4/SceMp4.h
 	SceMtpIfDriver/SceMtpIf.cpp SceMtpIfDriver/SceMtpIf.h
 	SceMusicExport/SceMusicExport.cpp SceMusicExport/SceMusicExport.h
 	SceNearDialogUtil/SceNearDialogUtil.cpp SceNearDialogUtil/SceNearDialogUtil.h

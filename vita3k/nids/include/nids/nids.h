@@ -5014,6 +5014,20 @@ NID(sceMotionDevSetGyroFeedBack, 0xCCAEBF59)
 NID(sceMotionDevSetSamplingMode, 0x3EAA8A4F)
 NID(sceMotionDevUpdateMagnCalibData, 0x787384FA)
 NID(sceMotionDevUpdateMagnStabilityLevel, 0xEC94F683)
+// Module "SceMP4"
+// Library "SceMP4"
+NID(sceMp4OpenFile, 0x05474AF0)
+NID(sceMp4CloseFile, 0x20A01112)
+NID(sceMp4StartFileStreaming, 0x30E49E4D)
+NID(sceMp4ReleaseBuffer, 0x32A15788)
+NID(sceMp4GetStreamInfo, 0x40351E1A)
+NID(sceMp4EnableStream, 0x40C64DC0)
+NID(sceMp4Reset, 0x609E57AD)
+NID(sceMp4GetNextUnit, 0x6B69F900)
+NID(sceMp4GetNextUnitData, 0x7B4832FE)
+NID(sceMp4PTSToTime, 0x8BE0E3D3)
+NID(sceMp4TimeToPTS, 0x920623C8)
+NID(sceMp4JumpPTS, 0x94E1305D)
 // Module "SceMtpIfDriver"
 // Library "SceMtpIf"
 NID(sceMtpIfCancelTransfer, 0x80D1CA60)
