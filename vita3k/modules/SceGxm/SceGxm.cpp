@@ -30,6 +30,8 @@
 
 #include <psp2/kernel/error.h>
 
+#include <immintrin.h>
+
 struct SceGxmContext {
     GxmContextState state;
     GXMRecordState record;
@@ -526,8 +528,113 @@ EXPORT(int, sceGxmDrawInstanced) {
     return UNIMPLEMENTED();
 }
 
-EXPORT(int, sceGxmDrawPrecomputed) {
-    return UNIMPLEMENTED();
+EXPORT(int, sceGxmDrawPrecomputed, SceGxmContext *context, emu::SceGxmPrecomputedDraw *draw) {
+    emu::SceGxmPrecomputedVertexState *vertex_state = context->state.precomputed_vertex_state.cast<emu::SceGxmPrecomputedVertexState>().get(host.mem);
+    emu::SceGxmPrecomputedFragmentState *fragment_state = context->state.precomputed_vertex_state.cast<emu::SceGxmPrecomputedFragmentState>().get(host.mem);
+
+    assert(context);
+    assert(vertex_state);
+    assert(fragment_state);
+
+    // not sure if precomputed uses current program... maybe it does?
+    // anyway states have to be made on a program to program basis so this should be safe
+    const SceGxmFragmentProgram *fragment_program = fragment_state->program.get(host.mem);
+    const SceGxmVertexProgram *vertex_program = vertex_state->program.get(host.mem);
+
+    if (!host.gxm.is_in_scene) {
+        return RET_ERROR(SCE_GXM_ERROR_NOT_WITHIN_SCENE);
+    }
+
+    if (!vertex_program || !fragment_program) {
+        return RET_ERROR(SCE_GXM_ERROR_NULL_PROGRAM);
+    }
+
+    //if (context->state.vertex_last_reserve_status == SceGxmLastReserveStatus::Reserved) {
+    //    const auto vertex_program = context->record.vertex_program.get(host.mem);
+    //    const auto program = vertex_program->program.get(host.mem);
+
+    //    const size_t size = program->default_uniform_buffer_count * 4;
+    //    const size_t next_used = context->state.vertex_ring_buffer_used + size;
+    //    assert(next_used <= context->state.params.vertexRingBufferMemSize);
+    //    if (next_used > context->state.params.vertexRingBufferMemSize) {
+    //        return RET_ERROR(SCE_GXM_ERROR_RESERVE_FAILED); // TODO: Does not actually return this on immediate context
+    //    }
+
+    //    context->state.vertex_ring_buffer_used = next_used;
+    //    context->state.vertex_last_reserve_status = SceGxmLastReserveStatus::Available;
+    //}
+    //if (context->state.fragment_last_reserve_status == SceGxmLastReserveStatus::Reserved) {
+    //    const auto fragment_program = context->record.fragment_program.get(host.mem);
+    //    const auto program = fragment_program->program.get(host.mem);
+
+    //    const size_t size = program->default_uniform_buffer_count * 4;
+    //    const size_t next_used = context->state.fragment_ring_buffer_used + size;
+    //    assert(next_used <= context->state.params.fragmentRingBufferMemSize);
+    //    if (next_used > context->state.params.fragmentRingBufferMemSize) {
+    //        return RET_ERROR(SCE_GXM_ERROR_RESERVE_FAILED); // TODO: Does not actually return this on immediate context
+    //    }
+
+    //    context->state.fragment_ring_buffer_used = next_used;
+    //    context->state.fragment_last_reserve_status = SceGxmLastReserveStatus::Available;
+    //}
+
+    // Set uniforms
+    const SceGxmProgram &vertex_program_gxp = *vertex_program->program.get(host.mem);
+    const SceGxmProgram &fragment_program_gxp = *fragment_program->program.get(host.mem);
+
+    // Update uniforms from this side. We should pass the pointer to parameter struct, since from there it can
+    // find the name and other things based on the pointer in memory. The pointer should be persists until
+    // the fragment is done, so we are guranteed to be safe.
+    UniformBuffers vertex_uniform_buffers;
+    UniformBuffers fragment_uniform_buffers;
+    vertex_uniform_buffers[SCE_GXM_DEFAULT_UNIFORM_BUFFER_CONTAINER_INDEX] = vertex_state->default_uniform_buffer;
+    fragment_uniform_buffers[SCE_GXM_DEFAULT_UNIFORM_BUFFER_CONTAINER_INDEX] = fragment_state->default_uniform_buffer;
+    renderer::set_uniforms(*host.renderer, context->renderer.get(), vertex_program_gxp, vertex_uniform_buffers, host.mem);
+    renderer::set_uniforms(*host.renderer, context->renderer.get(), fragment_program_gxp, fragment_uniform_buffers, host.mem);
+
+    // Update vertex data. We should stores a copy of the data to pass it to GPU later, since another scene
+    // may start to overwrite stuff when this scene is being processed in our queue (in case of OpenGL).
+    size_t max_index = 0;
+    if (draw->index_format == SCE_GXM_INDEX_FORMAT_U16) {
+        const uint16_t *const data = draw->index_data.cast<const uint16_t>().get(host.mem);
+        max_index = *std::max_element(&data[0], &data[draw->vertex_count]);
+    } else {
+        const uint32_t *const data = draw->index_data.cast<const uint32_t>().get(host.mem);
+        max_index = *std::max_element(&data[0], &data[draw->vertex_count]);
+    }
+
+    size_t max_data_length[SCE_GXM_MAX_VERTEX_STREAMS] = {};
+    std::uint32_t stream_used = 0;
+    for (const emu::SceGxmVertexAttribute &attribute : vertex_program->attributes) {
+        const SceGxmAttributeFormat attribute_format = static_cast<SceGxmAttributeFormat>(attribute.format);
+        const size_t attribute_size = gxm::attribute_format_size(attribute_format) * attribute.componentCount;
+        const SceGxmVertexStream &stream = vertex_program->streams[attribute.streamIndex];
+        const size_t data_length = attribute.offset + (max_index * stream.stride) + attribute_size;
+        max_data_length[attribute.streamIndex] = std::max<size_t>(max_data_length[attribute.streamIndex], data_length);
+        stream_used |= (1 << attribute.streamIndex);
+    }
+
+    // Copy and queue upload
+    for (size_t stream_index = 0; stream_index < SCE_GXM_MAX_VERTEX_STREAMS; ++stream_index) {
+        //LOG_INFO("streams[{}] = {}", stream_index, log_hex(draw->vertex_streams.get(host.mem)[stream_index].address()));
+        // Upload it
+        if (stream_used & (1 << static_cast<std::uint16_t>(stream_index))) {
+            const size_t data_length = max_data_length[stream_index];
+            const std::uint8_t *const data = draw->vertex_stream[stream_index].cast<const std::uint8_t>().get(host.mem);
+
+            std::uint8_t *a_copy = new std::uint8_t[data_length];
+            std::copy(data, data + data_length, a_copy);
+
+            renderer::set_vertex_stream(*host.renderer, context->renderer.get(), &context->state, stream_index,
+                data_length, a_copy);
+        }
+    }
+
+    // Fragment texture is copied so no need to set it here.
+    // Add draw command
+    renderer::draw(*host.renderer, context->renderer.get(), &context->state, draw->type, draw->index_format, draw->index_data.get(host.mem), draw->vertex_count);
+
+    return 0;
 }
 
 EXPORT(int, sceGxmEndCommandList) {
@@ -630,15 +737,19 @@ EXPORT(int, sceGxmGetParameterBufferThreshold) {
 }
 
 EXPORT(int, sceGxmGetPrecomputedDrawSize) {
-    return UNIMPLEMENTED();
+    STUBBED("handle");
+
+    return 4;
 }
 
 EXPORT(int, sceGxmGetPrecomputedFragmentStateSize) {
-    return UNIMPLEMENTED();
+    return 10 * sizeof(emu::SceGxmTexture); // allocate space for 10 textures
 }
 
 EXPORT(int, sceGxmGetPrecomputedVertexStateSize) {
-    return UNIMPLEMENTED();
+    STUBBED("handle");
+
+    return 4;
 }
 
 EXPORT(int, sceGxmGetRenderTargetMemSizes, const SceGxmRenderTargetParams *params, uint32_t *hostMemSize) {
@@ -792,16 +903,29 @@ EXPORT(int, sceGxmPopUserMarker) {
     return UNIMPLEMENTED();
 }
 
-EXPORT(int, sceGxmPrecomputedDrawInit) {
-    return UNIMPLEMENTED();
+EXPORT(int, sceGxmPrecomputedDrawInit, emu::SceGxmPrecomputedDraw *state, Ptr<const SceGxmVertexProgram> program, Ptr<void> extra_data) {
+    state->program = program;
+    state->extra_data = extra_data;
+
+    return 0;
 }
 
-EXPORT(int, sceGxmPrecomputedDrawSetAllVertexStreams) {
-    return UNIMPLEMENTED();
+EXPORT(int, sceGxmPrecomputedDrawSetAllVertexStreams, emu::SceGxmPrecomputedDraw *state, const Ptr<const void> *vertex_streams) {
+    for (uint32_t a = 0; a < 4; a++) {
+        //LOG_INFO("stream[{}] = {}", a, log_hex(vertex_streams.get(host.mem)[a].address()));s
+        state->vertex_stream[a] = vertex_streams[a];
+    }
+
+    return 0;
 }
 
-EXPORT(int, sceGxmPrecomputedDrawSetParams) {
-    return UNIMPLEMENTED();
+EXPORT(int, sceGxmPrecomputedDrawSetParams, emu::SceGxmPrecomputedDraw *state, SceGxmPrimitiveType type, SceGxmIndexFormat index_format, Ptr<const void> index_data, uint32_t vertex_count) {
+    state->type = type;
+    state->index_format = index_format;
+    state->index_data = index_data;
+    state->vertex_count = vertex_count;
+
+    return 0;
 }
 
 EXPORT(int, sceGxmPrecomputedDrawSetParamsInstanced) {
@@ -812,28 +936,39 @@ EXPORT(int, sceGxmPrecomputedDrawSetVertexStream) {
     return UNIMPLEMENTED();
 }
 
-EXPORT(int, sceGxmPrecomputedFragmentStateGetDefaultUniformBuffer) {
-    return UNIMPLEMENTED();
+EXPORT(Ptr<const void>, sceGxmPrecomputedFragmentStateGetDefaultUniformBuffer, emu::SceGxmPrecomputedFragmentState *state) {
+    return state->default_uniform_buffer;
 }
 
-EXPORT(int, sceGxmPrecomputedFragmentStateInit) {
-    return UNIMPLEMENTED();
+EXPORT(int, sceGxmPrecomputedFragmentStateInit, emu::SceGxmPrecomputedFragmentState *state, Ptr<const SceGxmFragmentProgram> program, Ptr<void> extra_data) {
+    state->program = program;
+    state->extra_data = extra_data;
+
+    return 0;
 }
 
 EXPORT(int, sceGxmPrecomputedFragmentStateSetAllAuxiliarySurfaces) {
     return UNIMPLEMENTED();
 }
 
-EXPORT(int, sceGxmPrecomputedFragmentStateSetAllTextures) {
-    return UNIMPLEMENTED();
+EXPORT(int, sceGxmPrecomputedFragmentStateSetAllTextures, emu::SceGxmPrecomputedFragmentState *state, Ptr<const SceGxmTexture> textures) {
+	// weird addresses passed sometimes
+    if (!textures || textures.address() == 0xFFFFFFFF)
+		return 0;
+
+    memcpy(state->extra_data.get(host.mem), textures.get(host.mem), 10 * sizeof(emu::SceGxmTexture));
+
+    return 0;
 }
 
 EXPORT(int, sceGxmPrecomputedFragmentStateSetAllUniformBuffers) {
     return UNIMPLEMENTED();
 }
 
-EXPORT(int, sceGxmPrecomputedFragmentStateSetDefaultUniformBuffer) {
-    return UNIMPLEMENTED();
+EXPORT(int, sceGxmPrecomputedFragmentStateSetDefaultUniformBuffer, emu::SceGxmPrecomputedFragmentState *state, Ptr<const void> buffer) {
+    state->default_uniform_buffer = buffer;
+
+    return 0;
 }
 
 EXPORT(int, sceGxmPrecomputedFragmentStateSetTexture) {
@@ -844,12 +979,15 @@ EXPORT(int, sceGxmPrecomputedFragmentStateSetUniformBuffer) {
     return UNIMPLEMENTED();
 }
 
-EXPORT(int, sceGxmPrecomputedVertexStateGetDefaultUniformBuffer) {
-    return UNIMPLEMENTED();
+EXPORT(Ptr<const void>, sceGxmPrecomputedVertexStateGetDefaultUniformBuffer, emu::SceGxmPrecomputedVertexState *state) {
+    return state->default_uniform_buffer;
 }
 
-EXPORT(int, sceGxmPrecomputedVertexStateInit) {
-    return UNIMPLEMENTED();
+EXPORT(int, sceGxmPrecomputedVertexStateInit, emu::SceGxmPrecomputedVertexState *state, Ptr<const SceGxmVertexProgram> program, Ptr<void> extra_data) {
+    state->program = program;
+    state->extra_data = extra_data;
+
+    return 0;
 }
 
 EXPORT(int, sceGxmPrecomputedVertexStateSetAllTextures) {
@@ -860,8 +998,10 @@ EXPORT(int, sceGxmPrecomputedVertexStateSetAllUniformBuffers) {
     return UNIMPLEMENTED();
 }
 
-EXPORT(int, sceGxmPrecomputedVertexStateSetDefaultUniformBuffer) {
-    return UNIMPLEMENTED();
+EXPORT(int, sceGxmPrecomputedVertexStateSetDefaultUniformBuffer, emu::SceGxmPrecomputedVertexState *state, Ptr<const void> buffer) {
+    state->default_uniform_buffer = buffer;
+
+    return 0;
 }
 
 EXPORT(int, sceGxmPrecomputedVertexStateSetTexture) {
@@ -1237,12 +1377,26 @@ EXPORT(int, sceGxmSetFrontVisibilityTestOp) {
     return UNIMPLEMENTED();
 }
 
-EXPORT(int, sceGxmSetPrecomputedFragmentState) {
-    return UNIMPLEMENTED();
+EXPORT(int, sceGxmSetPrecomputedFragmentState, SceGxmContext *context, Ptr<emu::SceGxmPrecomputedFragmentState> state) {
+    context->state.precomputed_fragment_state = state.cast<SceGxmPrecomputedFragmentState>();
+
+	if (!state)
+		return 0;
+
+	const emu::SceGxmTexture *textures = state.get(host.mem)->extra_data.cast<emu::SceGxmTexture>().get(host.mem);
+    for (uint32_t a = 0; a < 10; a++) {
+        if (textures[a].data_addr && textures[a].width != 0) {
+            renderer::set_fragment_texture(*host.renderer, context->renderer.get(), &context->state, a, textures[a]);
+        }
+    }
+
+    return 0;
 }
 
-EXPORT(int, sceGxmSetPrecomputedVertexState) {
-    return UNIMPLEMENTED();
+EXPORT(int, sceGxmSetPrecomputedVertexState, SceGxmContext *context, Ptr<SceGxmPrecomputedVertexState> state) {
+    context->state.precomputed_vertex_state = state;
+
+    return 0;
 }
 
 EXPORT(void, sceGxmSetRegionClip, SceGxmContext *context, SceGxmRegionClipMode mode, unsigned int xMin, unsigned int yMin, unsigned int xMax, unsigned int yMax) {

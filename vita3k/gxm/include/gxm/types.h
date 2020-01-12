@@ -93,7 +93,7 @@ struct SceGxmContextParams {
 };
 } // namespace emu
 
-typedef std::array<Ptr<void>, 16> UniformBuffers;
+typedef std::array<Ptr<const void>, 16> UniformBuffers;
 typedef std::array<Ptr<const void>, SCE_GXM_MAX_VERTEX_STREAMS> StreamDatas;
 
 struct GxmViewport {
@@ -196,6 +196,10 @@ struct GxmContextState {
 
     // Fragment Sync Object
     Ptr<SceGxmSyncObject> fragment_sync_object;
+
+    // Precomputed
+    Ptr<SceGxmPrecomputedVertexState> precomputed_vertex_state;
+    Ptr<SceGxmPrecomputedFragmentState> precomputed_fragment_state;
 };
 
 struct SceGxmFragmentProgram {
@@ -489,3 +493,32 @@ enum class GenericParameterType {
     Array
 };
 } // namespace gxp
+
+namespace emu {
+struct SceGxmPrecomputedDraw {
+    Ptr<const SceGxmVertexProgram> program;
+    Ptr<void> extra_data;
+
+    SceGxmPrimitiveType type;
+    uint32_t vertex_count;
+    SceGxmIndexFormat index_format;
+    Ptr<const void> index_data;
+
+    Ptr<const void> vertex_stream[4];
+};
+struct SceGxmPrecomputedFragmentState {
+    Ptr<const SceGxmFragmentProgram> program;
+    Ptr<void> extra_data;
+
+    Ptr<const void> default_uniform_buffer;
+};
+struct SceGxmPrecomputedVertexState {
+    Ptr<const SceGxmVertexProgram> program;
+    Ptr<void> extra_data;
+
+    Ptr<const void> default_uniform_buffer;
+};
+static_assert(SCE_GXM_PRECOMPUTED_DRAW_WORD_COUNT * sizeof(uint32_t) >= sizeof(emu::SceGxmPrecomputedDraw), "Precomputed Draw Size Too Big");
+static_assert(SCE_GXM_PRECOMPUTED_VERTEX_STATE_WORD_COUNT * sizeof(uint32_t) >= sizeof(emu::SceGxmPrecomputedVertexState), "Precomputed Vertex State Size Too Big");
+static_assert(SCE_GXM_PRECOMPUTED_FRAGMENT_STATE_WORD_COUNT * sizeof(uint32_t) >= sizeof(emu::SceGxmPrecomputedFragmentState), "Precomputed Fragment State Size Too Big");
+} // namespace emu

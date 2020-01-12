@@ -651,7 +651,7 @@ static SpirvShaderParameters create_parameters(spv::Builder &b, const SceGxmProg
 
     spv::Id f32_v4_type = b.makeVectorType(f32_type, 4);
     spv::Id pa_arr_type = b.makeArrayType(f32_v4_type, b.makeIntConstant(32), 0);
-    spv::Id sa_arr_type = b.makeArrayType(f32_v4_type, b.makeIntConstant(32), 0);
+    spv::Id sa_arr_type = b.makeArrayType(f32_v4_type, b.makeIntConstant(40), 0);
     spv::Id i_arr_type = b.makeArrayType(f32_v4_type, b.makeIntConstant(3), 0);
     spv::Id temp_arr_type = b.makeArrayType(f32_v4_type, b.makeIntConstant(20), 0);
     spv::Id index_arr_type = b.makeArrayType(i32_type, b.makeIntConstant(2), 0);
