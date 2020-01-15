@@ -611,6 +611,15 @@ EXPORT(int, sceGxmDrawPrecomputed, SceGxmContext *context, emu::SceGxmPrecompute
         max_index = *std::max_element(&data[0], &data[draw->vertex_count]);
     }
 
+    const emu::SceGxmTexture *textures = fragment_state->texture_data.cast<emu::SceGxmTexture>().get(host.mem);
+    if (textures) {
+        for (uint32_t a = 0; a < 10; a++) {
+            if (textures[a].data_addr && textures[a].width != 0) { // not 0
+                renderer::set_fragment_texture(*host.renderer, context->renderer.get(), &context->state, a, textures[a]);
+            }
+        }
+    }
+
     size_t max_data_length[SCE_GXM_MAX_VERTEX_STREAMS] = {};
     std::uint32_t stream_used = 0;
     for (const emu::SceGxmVertexAttribute &attribute : vertex_program->attributes) {
@@ -751,7 +760,9 @@ EXPORT(int, sceGxmGetPrecomputedDrawSize) {
 }
 
 EXPORT(int, sceGxmGetPrecomputedFragmentStateSize) {
-    return 10 * sizeof(emu::SceGxmTexture); // allocate space for 10 textures
+    STUBBED("handle");
+
+    return 4;
 }
 
 EXPORT(int, sceGxmGetPrecomputedVertexStateSize) {
@@ -954,6 +965,11 @@ EXPORT(int, sceGxmPrecomputedFragmentStateInit, emu::SceGxmPrecomputedFragmentSt
     state->program = program;
     state->extra_data = extra_data;
 
+    // extra_data is overwriten by game sometimes- let it be opaque please!
+    state->texture_data = alloc(host.mem, 10 * sizeof(emu::SceGxmTexture), "Precomputed Texture Space");
+
+    std::memset(state->texture_data.get(host.mem), 0, 10 * sizeof(emu::SceGxmTexture));
+
     return 0;
 }
 
@@ -962,11 +978,21 @@ EXPORT(int, sceGxmPrecomputedFragmentStateSetAllAuxiliarySurfaces) {
 }
 
 EXPORT(int, sceGxmPrecomputedFragmentStateSetAllTextures, emu::SceGxmPrecomputedFragmentState *state, Ptr<const SceGxmTexture> textures) {
-	// weird addresses passed sometimes
-    if (!textures || textures.address() == 0xFFFFFFFF)
-		return 0;
+    // weird addresses passed sometimes
+    if (!textures)
+        return 0;
 
-    memcpy(state->extra_data.get(host.mem), textures.get(host.mem), 10 * sizeof(emu::SceGxmTexture));
+    const SceGxmProgram *program = state->program.get(host.mem)->program.get(host.mem);
+
+    const SceGxmDependentSampler *dependent_samplers = reinterpret_cast<const SceGxmDependentSampler *>(
+        reinterpret_cast<const std::uint8_t *>(&program->dependent_sampler_offset) + program->dependent_sampler_offset);
+
+    for (std::uint32_t i = 0; i < program->dependent_sampler_count; i++) {
+        SceGxmDependentSampler sampler = dependent_samplers[i];
+        uint32_t index = sampler.resource_index_layout_offset / 4;
+
+        //std::memcpy(&state->texture_data.cast<emu::SceGxmTexture>().get(host.mem)[index], &textures.get(host.mem)[index], sizeof(emu::SceGxmTexture));
+    }
 
     return 0;
 }
@@ -1394,15 +1420,8 @@ EXPORT(int, sceGxmSetFrontVisibilityTestOp) {
 EXPORT(int, sceGxmSetPrecomputedFragmentState, SceGxmContext *context, Ptr<emu::SceGxmPrecomputedFragmentState> state) {
     context->state.precomputed_fragment_state = state.cast<SceGxmPrecomputedFragmentState>();
 
-	if (!state)
-		return 0;
-
-	const emu::SceGxmTexture *textures = state.get(host.mem)->extra_data.cast<emu::SceGxmTexture>().get(host.mem);
-    for (uint32_t a = 0; a < 10; a++) {
-        if (textures[a].data_addr && textures[a].width != 0) {
-            renderer::set_fragment_texture(*host.renderer, context->renderer.get(), &context->state, a, textures[a]);
-        }
-    }
+    if (!state)
+	return 0;
 
     return 0;
 }
