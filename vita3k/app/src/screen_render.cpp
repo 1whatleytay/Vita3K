@@ -134,6 +134,10 @@ void gl_screen_renderer::render(const HostState &host) {
         glEnableVertexAttribArray(uvAttrib);
 
         glBindTexture(GL_TEXTURE_2D, m_screen_texture);
+        if (display.base.address() < 10) {
+            LOG_WARN("Display base is {}", log_hex(display.base.address()));
+            return;
+        }
         const auto pixels = display.base.cast<void>().get(mem);
 
         glPixelStorei(GL_UNPACK_ROW_LENGTH, display.pitch);
