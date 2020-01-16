@@ -87,7 +87,7 @@ EXPORT(int, sceKernelFreeMemBlock, SceUID uid) {
 
     KernelState *const state = &host.kernel;
     const Blocks::const_iterator block = state->blocks.find(uid);
-    assert(block != state->blocks.end());
+    if (block == state->blocks.end()) return 0;
 
     free(host.mem, block->second.address());
     state->blocks.erase(block);
