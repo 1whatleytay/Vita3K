@@ -530,7 +530,7 @@ EXPORT(int, sceGxmDrawInstanced) {
 
 EXPORT(int, sceGxmDrawPrecomputed, SceGxmContext *context, emu::SceGxmPrecomputedDraw *draw) {
     emu::SceGxmPrecomputedVertexState *vertex_state = context->state.precomputed_vertex_state.cast<emu::SceGxmPrecomputedVertexState>().get(host.mem);
-    emu::SceGxmPrecomputedFragmentState *fragment_state = context->state.precomputed_vertex_state.cast<emu::SceGxmPrecomputedFragmentState>().get(host.mem);
+    emu::SceGxmPrecomputedFragmentState *fragment_state = context->state.precomputed_fragment_state.cast<emu::SceGxmPrecomputedFragmentState>().get(host.mem);
 
     assert(context);
     assert(vertex_state);
@@ -548,35 +548,6 @@ EXPORT(int, sceGxmDrawPrecomputed, SceGxmContext *context, emu::SceGxmPrecompute
     if (!vertex_program || !fragment_program) {
         return RET_ERROR(SCE_GXM_ERROR_NULL_PROGRAM);
     }
-
-    //if (context->state.vertex_last_reserve_status == SceGxmLastReserveStatus::Reserved) {
-    //    const auto vertex_program = context->record.vertex_program.get(host.mem);
-    //    const auto program = vertex_program->program.get(host.mem);
-
-    //    const size_t size = program->default_uniform_buffer_count * 4;
-    //    const size_t next_used = context->state.vertex_ring_buffer_used + size;
-    //    assert(next_used <= context->state.params.vertexRingBufferMemSize);
-    //    if (next_used > context->state.params.vertexRingBufferMemSize) {
-    //        return RET_ERROR(SCE_GXM_ERROR_RESERVE_FAILED); // TODO: Does not actually return this on immediate context
-    //    }
-
-    //    context->state.vertex_ring_buffer_used = next_used;
-    //    context->state.vertex_last_reserve_status = SceGxmLastReserveStatus::Available;
-    //}
-    //if (context->state.fragment_last_reserve_status == SceGxmLastReserveStatus::Reserved) {
-    //    const auto fragment_program = context->record.fragment_program.get(host.mem);
-    //    const auto program = fragment_program->program.get(host.mem);
-
-    //    const size_t size = program->default_uniform_buffer_count * 4;
-    //    const size_t next_used = context->state.fragment_ring_buffer_used + size;
-    //    assert(next_used <= context->state.params.fragmentRingBufferMemSize);
-    //    if (next_used > context->state.params.fragmentRingBufferMemSize) {
-    //        return RET_ERROR(SCE_GXM_ERROR_RESERVE_FAILED); // TODO: Does not actually return this on immediate context
-    //    }
-
-    //    context->state.fragment_ring_buffer_used = next_used;
-    //    context->state.fragment_last_reserve_status = SceGxmLastReserveStatus::Available;
-    //}
 
     // Set uniforms
     const SceGxmProgram &vertex_program_gxp = *vertex_program->program.get(host.mem);
@@ -603,10 +574,11 @@ EXPORT(int, sceGxmDrawPrecomputed, SceGxmContext *context, emu::SceGxmPrecompute
         max_index = *std::max_element(&data[0], &data[draw->vertex_count]);
     }
 
-    const emu::SceGxmTexture *textures = fragment_state->texture_data.cast<emu::SceGxmTexture>().get(host.mem);
+    const emu::SceGxmTexture *textures = fragment_state->extra_data.cast<emu::SceGxmTexture>().get(host.mem);
     if (textures) {
-        for (uint32_t a = 0; a < 10; a++) {
-            if (textures[a].data_addr && textures[a].width != 0) { // not 0
+        for (uint32_t a = 0; a < 3; a++) {
+            emu::SceGxmTexture texture = textures[a];
+            if (textures[a].data_addr != 0 && textures[a].width != 0 && texture.min_filter == 2 && texture.mag_filter == 2) { // not 0
                 renderer::set_fragment_texture(*host.renderer, context->renderer.get(), &context->state, a, textures[a]);
             }
         }
@@ -754,7 +726,7 @@ EXPORT(int, sceGxmGetPrecomputedDrawSize) {
 EXPORT(int, sceGxmGetPrecomputedFragmentStateSize) {
     STUBBED("handle");
 
-    return 4;
+    return 3 * sizeof(emu::SceGxmTexture);
 }
 
 EXPORT(int, sceGxmGetPrecomputedVertexStateSize) {
@@ -955,10 +927,7 @@ EXPORT(int, sceGxmPrecomputedFragmentStateInit, emu::SceGxmPrecomputedFragmentSt
     state->program = program;
     state->extra_data = extra_data;
 
-    // extra_data is overwriten by game sometimes- let it be opaque please!
-    state->texture_data = alloc(host.mem, 10 * sizeof(emu::SceGxmTexture), "Precomputed Texture Space");
-
-    std::memset(state->texture_data.get(host.mem), 0, 10 * sizeof(emu::SceGxmTexture));
+    std::memset(extra_data.get(host.mem), 0, 3 * sizeof(emu::SceGxmTexture));
 
     return 0;
 }
@@ -967,22 +936,12 @@ EXPORT(int, sceGxmPrecomputedFragmentStateSetAllAuxiliarySurfaces) {
     return UNIMPLEMENTED();
 }
 
-EXPORT(int, sceGxmPrecomputedFragmentStateSetAllTextures, emu::SceGxmPrecomputedFragmentState *state, Ptr<const SceGxmTexture> textures) {
+EXPORT(int, sceGxmPrecomputedFragmentStateSetAllTextures, emu::SceGxmPrecomputedFragmentState *state, Ptr<const emu::SceGxmTexture> textures) {
     // weird addresses passed sometimes
     if (!textures)
         return 0;
 
-    const SceGxmProgram *program = state->program.get(host.mem)->program.get(host.mem);
-
-    const SceGxmDependentSampler *dependent_samplers = reinterpret_cast<const SceGxmDependentSampler *>(
-        reinterpret_cast<const std::uint8_t *>(&program->dependent_sampler_offset) + program->dependent_sampler_offset);
-
-    for (std::uint32_t i = 0; i < program->dependent_sampler_count; i++) {
-        SceGxmDependentSampler sampler = dependent_samplers[i];
-        uint32_t index = sampler.resource_index_layout_offset / 4;
-
-        //std::memcpy(&state->texture_data.cast<emu::SceGxmTexture>().get(host.mem)[index], &textures.get(host.mem)[index], sizeof(emu::SceGxmTexture));
-    }
+    std::memcpy(state->extra_data.cast<emu::SceGxmTexture>().get(host.mem), textures.get(host.mem), 3 * sizeof(emu::SceGxmTexture));
 
     return 0;
 }

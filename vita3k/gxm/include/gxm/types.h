@@ -511,7 +511,6 @@ struct SceGxmPrecomputedFragmentState {
     Ptr<void> extra_data;
 
     Ptr<const void> default_uniform_buffer;
-    Ptr<emu::SceGxmTexture> texture_data;
 };
 struct SceGxmPrecomputedVertexState {
     Ptr<const SceGxmVertexProgram> program;
