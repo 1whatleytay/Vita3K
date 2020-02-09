@@ -190,7 +190,7 @@ EXPORT(int, sceAvcdecCreateDecoder, uint32_t codec_type, SceAvcdecCtrl *decoder,
     SceUID handle = host.kernel.get_next_uid();
     decoder->handle = handle;
 
-    host.kernel.decoders[handle] = std::make_shared<VideoDecoderState>();
+    host.kernel.decoders[handle] = std::make_shared<DecoderState>();
     DecoderPtr &decoder_info = host.kernel.decoders[handle];
     decoder_info->frame_width = query->horizontal;
     decoder_info->frame_height = query->vertical;

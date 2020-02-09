@@ -170,16 +170,17 @@ struct AVCodecContext;
 struct AVFormatContext;
 struct AVCodecParserContext;
 
-struct VideoDecoderState {
+struct DecoderState {
     AVCodecContext *context{};
     AVCodecParserContext *parser{};
 
-    uint32_t frame_width;
-    uint32_t frame_height;
-    uint32_t frame_ref_count;
+    // Video Info
+    uint32_t frame_width = 0;
+    uint32_t frame_height = 0;
+    uint32_t frame_ref_count = 0;
 };
 
-typedef std::shared_ptr<VideoDecoderState> DecoderPtr;
+typedef std::shared_ptr<DecoderState> DecoderPtr;
 typedef std::map<SceUID, DecoderPtr> DecoderStates;
 
 struct PlayerState {
