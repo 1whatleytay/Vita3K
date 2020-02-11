@@ -3,13 +3,13 @@
 
 #include <fstream>
 
-namespace emu::ngs::master {
-    std::unique_ptr<emu::ngs::Module> VoiceDefinition::new_module() {
+namespace ngs::master {
+    std::unique_ptr<ngs::Module> VoiceDefinition::new_module() {
         return std::make_unique<Module>();
     }
     
     Module::Module() 
-        : emu::ngs::Module(emu::ngs::BUSS_MASTER) {
+        : ngs::Module(ngs::BUSS_MASTER) {
     }
 
     void Module::get_expectation(AudioDataType *expect_audio_type, std::int16_t *expect_channel_count) {

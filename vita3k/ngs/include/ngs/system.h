@@ -13,7 +13,7 @@
 
 struct MemState;
 
-namespace emu::ngs {
+namespace ngs {
     struct State;
     
     struct ModuleParameterHeader {

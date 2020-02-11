@@ -6,8 +6,8 @@ extern "C" {
 #include <libavcodec/avcodec.h>
 }
 
-namespace emu::ngs::atrac9 {
-    std::unique_ptr<emu::ngs::Module> VoiceDefinition::new_module() {
+namespace ngs::atrac9 {
+    std::unique_ptr<ngs::Module> VoiceDefinition::new_module() {
         return std::make_unique<Module>();
     }
 
@@ -25,7 +25,7 @@ namespace emu::ngs::atrac9 {
     static_assert(sizeof(FFMPEG_ATRAC9Info) == 16);
     
     Module::Module() 
-        : emu::ngs::Module(emu::ngs::BUSS_ATRAC9)
+        : ngs::Module(ngs::BUSS_ATRAC9)
         , context(nullptr) {
         if (!init()) {
             LOG_WARN("ATRAC9 module is not supported!");

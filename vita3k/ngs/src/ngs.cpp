@@ -7,7 +7,7 @@
 
 #include <util/log.h>
 
-namespace emu::ngs {
+namespace ngs {
     Rack::Rack(System *mama, const Ptr<void> memspace, const std::uint32_t memspace_size)
         : MempoolObject(memspace, memspace_size)
         , system(mama) {
@@ -243,14 +243,14 @@ namespace emu::ngs {
     }
 
     std::uint32_t Rack::get_required_memspace_size(MemState &mem, RackDescription *description) {
-        return sizeof(emu::ngs::Rack) + description->voice_count * sizeof(emu::ngs::Voice) +
+        return sizeof(ngs::Rack) + description->voice_count * sizeof(ngs::Voice) +
             description->definition.get(mem)->get_buffer_parameter_size() * description->voice_count +
-            description->patches_per_output * sizeof(emu::ngs::Patch);
+            description->patches_per_output * sizeof(ngs::Patch);
     }
     
     bool init(State &ngs, MemState &mem) {
         static constexpr std::uint32_t SIZE_OF_VOICE_DEFS = (TOTAL_BUSS_TYPES - 1) * sizeof(VoiceDefinition)
-            + sizeof(emu::ngs::atrac9::Module);
+            + sizeof(ngs::atrac9::Module);
         static constexpr std::uint32_t SIZE_OF_GLOBAL_MEMSPACE = SIZE_OF_VOICE_DEFS;
 
         // Alloc the space for voice definition
@@ -263,9 +263,9 @@ namespace emu::ngs {
 
         ngs.allocator.init(SIZE_OF_GLOBAL_MEMSPACE);
 
-        ngs.definitions[emu::ngs::BUSS_ATRAC9] = ngs.alloc_and_init<emu::ngs::atrac9::VoiceDefinition>(mem);
-        ngs.definitions[emu::ngs::BUSS_NORMAL_PLAYER] = ngs.alloc_and_init<emu::ngs::player::VoiceDefinition>(mem);
-        ngs.definitions[emu::ngs::BUSS_MASTER] = ngs.alloc_and_init<emu::ngs::master::VoiceDefinition>(mem);
+        ngs.definitions[ngs::BUSS_ATRAC9] = ngs.alloc_and_init<ngs::atrac9::VoiceDefinition>(mem);
+        ngs.definitions[ngs::BUSS_NORMAL_PLAYER] = ngs.alloc_and_init<ngs::player::VoiceDefinition>(mem);
+        ngs.definitions[ngs::BUSS_MASTER] = ngs.alloc_and_init<ngs::master::VoiceDefinition>(mem);
 
         return true;
     }

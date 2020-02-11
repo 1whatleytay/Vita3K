@@ -3,7 +3,7 @@
 
 #include <algorithm>
 
-namespace emu::ngs {
+namespace ngs {
     bool VoiceScheduler::deque_voice(Voice *voice) {
         const std::lock_guard<std::mutex> guard(lock);
         auto voice_in = std::find(queue.begin(), queue.end(), voice);
@@ -17,13 +17,13 @@ namespace emu::ngs {
     }
 
     bool VoiceScheduler::play(const MemState &mem, Voice *voice) {
-        bool should_enqueue = (voice->state == emu::ngs::VOICE_STATE_PAUSED || voice->state == emu::ngs::VOICE_STATE_AVAILABLE);
+        bool should_enqueue = (voice->state == ngs::VOICE_STATE_PAUSED || voice->state == ngs::VOICE_STATE_AVAILABLE);
 
         // Transition
-        if (voice->state == emu::ngs::VOICE_STATE_ACTIVE || voice->state == emu::ngs::VOICE_STATE_PAUSED) {
-            voice->state = emu::ngs::VOICE_STATE_ACTIVE;
-        } else if (voice->state == emu::ngs::VOICE_STATE_AVAILABLE) {
-            voice->state = emu::ngs::VOICE_STATE_PENDING;
+        if (voice->state == ngs::VOICE_STATE_ACTIVE || voice->state == ngs::VOICE_STATE_PAUSED) {
+            voice->state = ngs::VOICE_STATE_ACTIVE;
+        } else if (voice->state == ngs::VOICE_STATE_AVAILABLE) {
+            voice->state = ngs::VOICE_STATE_PENDING;
         } else {
             return false;
         }
@@ -55,12 +55,12 @@ namespace emu::ngs {
     }
 
     bool VoiceScheduler::pause(Voice *voice) {
-        if (voice->state == emu::ngs::VOICE_STATE_AVAILABLE || voice->state == emu::ngs::VOICE_STATE_PAUSED) {
+        if (voice->state == ngs::VOICE_STATE_AVAILABLE || voice->state == ngs::VOICE_STATE_PAUSED) {
             return true;
         }
 
-        if (voice->state == emu::ngs::VOICE_STATE_ACTIVE || voice->state == emu::ngs::VOICE_STATE_PENDING) {
-            voice->state = emu::ngs::VOICE_STATE_PAUSED;
+        if (voice->state == ngs::VOICE_STATE_ACTIVE || voice->state == ngs::VOICE_STATE_PENDING) {
+            voice->state = ngs::VOICE_STATE_PAUSED;
 
             // Remove from the list
             deque_voice(voice);
@@ -72,11 +72,11 @@ namespace emu::ngs {
     }
 
     bool VoiceScheduler::stop(Voice *voice) {
-        if (voice->state == emu::ngs::VOICE_STATE_AVAILABLE || voice->state == emu::ngs::VOICE_STATE_FINALIZING) {
+        if (voice->state == ngs::VOICE_STATE_AVAILABLE || voice->state == ngs::VOICE_STATE_FINALIZING) {
             return false;
         }
 
-        voice->state = emu::ngs::VOICE_STATE_AVAILABLE;
+        voice->state = ngs::VOICE_STATE_AVAILABLE;
         deque_voice(voice);
 
         return true;
@@ -85,8 +85,8 @@ namespace emu::ngs {
     void VoiceScheduler::update(const MemState &mem) {
         const std::lock_guard<std::mutex> guard(lock);
 
-        for (emu::ngs::Voice *voice: queue) {
-            voice->state = emu::ngs::VOICE_STATE_ACTIVE;
+        for (ngs::Voice *voice: queue) {
+            voice->state = ngs::VOICE_STATE_ACTIVE;
             voice->rack->module->process(mem, voice);
         }
     }

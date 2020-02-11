@@ -5,7 +5,7 @@
 
 struct MemState;
 
-namespace emu::ngs {
+namespace ngs {
     struct PatchSetupInfo;
     struct Voice;
     struct Patch;

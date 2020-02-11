@@ -7,7 +7,7 @@ extern "C" {
 
 #include <util/log.h>
 
-namespace emu::ngs {
+namespace ngs {
     static AVSampleFormat audio_data_type_to_sample_format(AudioDataType data_type) {
         switch (data_type) {
         case AudioDataType::F32:
