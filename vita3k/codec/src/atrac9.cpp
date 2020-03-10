@@ -6,6 +6,8 @@ extern "C" {
 #include <libswresample/swresample.h>
 }
 
+#include <util/log.h>
+
 #include <cassert>
 
 struct FFMPEGAtrac9Info {
@@ -110,7 +112,7 @@ uint32_t Atrac9DecoderState::get(DecoderQuery query) {
     }
 }
 
-void Atrac9DecoderState::send(const uint8_t *data, uint32_t size) {
+bool Atrac9DecoderState::send(const uint8_t *data, uint32_t size) {
     AVPacket *packet = av_packet_alloc();
 
     std::vector<uint8_t> temporary(size + AV_INPUT_BUFFER_PADDING_SIZE);
@@ -120,16 +122,24 @@ void Atrac9DecoderState::send(const uint8_t *data, uint32_t size) {
     packet->data = temporary.data();
 
     int err = avcodec_send_packet(context, packet);
-    assert(err == 0);
-
     av_packet_free(&packet);
+    if (err < 0) {
+        LOG_WARN("Error sending Atrac9 packet: {}.", log_hex(static_cast<uint32_t>(err)));
+        return false;
+    }
+
+    return true;
 }
 
-void Atrac9DecoderState::receive(uint8_t *data, DecoderSize *size) {
+bool Atrac9DecoderState::receive(uint8_t *data, DecoderSize *size) {
     AVFrame *frame = av_frame_alloc();
 
     int err = avcodec_receive_frame(context, frame);
-    assert(err == 0);
+    if (err < 0) {
+        LOG_WARN("Error receiving Atrac9 frame: {}.", log_hex(static_cast<uint32_t>(err)));
+        av_frame_free(&frame);
+        return false;
+    }
 
     assert(frame->format == AV_SAMPLE_FMT_FLTP);
 //    assert(get(DecoderQuery::AT9_SAMPLE_PER_SUPERFRAME) == frame->nb_samples);
@@ -146,6 +156,7 @@ void Atrac9DecoderState::receive(uint8_t *data, DecoderSize *size) {
     }
 
     av_frame_free(&frame);
+    return true;
 }
 
 Atrac9DecoderState::Atrac9DecoderState(uint32_t config_data) : config_data(config_data) {

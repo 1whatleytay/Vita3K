@@ -9,18 +9,14 @@
 
 namespace ngs {
     Rack::Rack(System *mama, const Ptr<void> memspace, const std::uint32_t memspace_size)
-        : MempoolObject(memspace, memspace_size)
-        , system(mama) {
-
-    }
+        : MempoolObject(memspace, memspace_size),
+        system(mama) { }
 
     System::System(const Ptr<void> memspace, const std::uint32_t memspace_size)
         : MempoolObject(memspace, memspace_size)
         , max_voices(0)
         , granularity(0)
-        , sample_rate(0) {
-
-    }
+        , sample_rate(0) { }
 
     void VoiceInputManager::init(const std::uint16_t total_input) {
         inputs.resize(total_input);
@@ -151,9 +147,11 @@ namespace ngs {
             return nullptr;
         }
 
-        last_info.resize(info.size);
-        const std::uint8_t *current_data = info.data.cast<const std::uint8_t>().get(mem);
-        std::copy(current_data, current_data + info.size, &last_info[0]);
+        if (info.data) {
+            const std::uint8_t *current_data = info.data.cast<const std::uint8_t>().get(mem);
+            last_info.resize(info.size);
+            std::copy(current_data, current_data + info.size, last_info.data());
+        }
 
         flags |= PARAMS_LOCK;
 
@@ -243,9 +241,12 @@ namespace ngs {
     }
 
     std::uint32_t Rack::get_required_memspace_size(MemState &mem, RackDescription *description) {
+        uint32_t buffer_size = 0;
+        if (description->definition)
+            buffer_size = description->definition.get(mem)->get_buffer_parameter_size() * description->voice_count;
+
         return sizeof(ngs::Rack) + description->voice_count * sizeof(ngs::Voice) +
-            description->definition.get(mem)->get_buffer_parameter_size() * description->voice_count +
-            description->patches_per_output * sizeof(ngs::Patch);
+            buffer_size + description->patches_per_output * sizeof(ngs::Patch);
     }
     
     bool init(State &ngs, MemState &mem) {
@@ -299,7 +300,10 @@ namespace ngs {
             return false;
         }
 
-        rack->module = description->definition.get(mem)->new_module();
+        if (description->definition)
+            rack->module = description->definition.get(mem)->new_module();
+        else
+            rack->module = nullptr;
 
         // Initialize voice definition
         rack->channels_per_voice = description->channels_per_voice;
@@ -320,7 +324,10 @@ namespace ngs {
             v->init(rack);
 
             // Allocate parameter buffer info for each voice
-            v->info.size = description->definition.get(mem)->get_buffer_parameter_size();
+            if (description->definition)
+                v->info.size = description->definition.get(mem)->get_buffer_parameter_size();
+            else
+                v->info.size = 0;
 
             if (v->info.size != 0) {
                 v->info.data = rack->alloc_raw(v->info.size);

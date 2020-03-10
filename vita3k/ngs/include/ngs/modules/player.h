@@ -34,9 +34,7 @@ namespace ngs::player {
     struct Module: public ngs::Module {
         explicit Module();
         void process(const MemState &mem, Voice *voice) override;
-        void get_expectation(AudioDataType *expect_audio_type, std::int16_t *expect_channel_count) override {
-            
-        }
+        void get_expectation(AudioDataType *expect_audio_type, std::int16_t *expect_channel_count) override { }
     };
 
     struct VoiceDefinition: public ngs::VoiceDefinition {

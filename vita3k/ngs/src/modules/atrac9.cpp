@@ -67,7 +67,7 @@ namespace ngs::atrac9 {
                 + state->current_byte_position_in_buffer;
             std::vector<uint8_t> output();
             decoder->send(input, decoder->get_superframe_size());
-            decoder->receive(nullptr);
+            decoder->receive(nullptr, nullptr);
 
             assert(false);
 

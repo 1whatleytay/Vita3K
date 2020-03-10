@@ -38,13 +38,8 @@ namespace ngs {
     };
 
     struct VoiceDefinition {
-        virtual std::unique_ptr<Module> new_module() {
-            return nullptr;
-        }
-
-        virtual std::size_t get_buffer_parameter_size() const { 
-            return 0;
-        }
+        virtual std::unique_ptr<Module> new_module() = 0;
+        virtual std::size_t get_buffer_parameter_size() const = 0;
     };
 
     struct SystemInitParameters {
@@ -75,8 +70,6 @@ namespace ngs {
         Voice *dest;
         Voice *source;
     };
-
-    struct VoiceDefinition;
 
     struct RackDescription {
         Ptr<VoiceDefinition> definition;

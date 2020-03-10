@@ -16,7 +16,7 @@ namespace ngs {
 
     struct State: public MempoolObject {
         std::array<Ptr<VoiceDefinition>, TOTAL_BUSS_TYPES> definitions;
-        std::vector<System*> systems;
+        std::vector<System *> systems;
     };
     
     bool init(State &ngs, MemState &mem);
