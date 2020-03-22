@@ -29,9 +29,8 @@ namespace ngs {
     struct Module {
         BussType buss_type;
 
-        explicit Module() = default;
-        explicit Module(BussType buss_type) : buss_type(buss_type) {
-        }
+        explicit Module(BussType buss_type) : buss_type(buss_type) { }
+        virtual ~Module() = default;
 
         virtual void process(const MemState &mem, Voice *voice) = 0;
         virtual void get_expectation(AudioDataType *expect_audio_type, std::int16_t *expect_channel_count) = 0;
@@ -221,4 +220,6 @@ namespace ngs {
     
     bool init_system(State &ngs, const MemState &mem, SystemInitParameters *parameters, Ptr<void> memspace, const std::uint32_t memspace_size);
     bool init_rack(State &ngs, const MemState &mem, System *system, BufferParamsInfo *init_info, const RackDescription *description);
+
+    Ptr<VoiceDefinition> get_voice_definition(State &ngs, MemState &mem, ngs::BussType type);
 }

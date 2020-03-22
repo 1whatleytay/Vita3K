@@ -250,8 +250,8 @@ namespace ngs {
     }
     
     bool init(State &ngs, MemState &mem) {
-        static constexpr std::uint32_t SIZE_OF_VOICE_DEFS = (TOTAL_BUSS_TYPES - 1) * sizeof(VoiceDefinition)
-            + sizeof(ngs::atrac9::Module);
+        // this looks strange... maybe catch in review?
+        static constexpr std::uint32_t SIZE_OF_VOICE_DEFS = sizeof(ngs::atrac9::Module);
         static constexpr std::uint32_t SIZE_OF_GLOBAL_MEMSPACE = SIZE_OF_VOICE_DEFS;
 
         // Alloc the space for voice definition
@@ -263,10 +263,6 @@ namespace ngs {
         }
 
         ngs.allocator.init(SIZE_OF_GLOBAL_MEMSPACE);
-
-        ngs.definitions[ngs::BUSS_ATRAC9] = ngs.alloc_and_init<ngs::atrac9::VoiceDefinition>(mem);
-        ngs.definitions[ngs::BUSS_NORMAL_PLAYER] = ngs.alloc_and_init<ngs::player::VoiceDefinition>(mem);
-        ngs.definitions[ngs::BUSS_MASTER] = ngs.alloc_and_init<ngs::master::VoiceDefinition>(mem);
 
         return true;
     }
@@ -339,5 +335,20 @@ namespace ngs {
         system->racks.push_back(rack);
 
         return true;
+    }
+
+    Ptr<VoiceDefinition> get_voice_definition(State &ngs, MemState &mem, ngs::BussType type) {
+        switch (type) {
+            case ngs::BussType::BUSS_ATRAC9:
+                return ngs.alloc_and_init<ngs::atrac9::VoiceDefinition>(mem);
+            case ngs::BussType::BUSS_NORMAL_PLAYER:
+                return ngs.alloc_and_init<ngs::player::VoiceDefinition>(mem);
+            case ngs::BussType::BUSS_MASTER:
+                return ngs.alloc_and_init<ngs::master::VoiceDefinition>(mem);
+
+            default:
+                LOG_ERROR("Missing voice definition for Buss Type {}.", static_cast<uint32_t>(type));
+                return Ptr<VoiceDefinition>();
+        }
     }
 }

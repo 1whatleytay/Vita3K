@@ -7,7 +7,7 @@ namespace ngs::player {
         return std::make_unique<Module>();
     }
     
-    Module::Module() : ngs::Module(ngs::BUSS_NORMAL_PLAYER) { }
+    Module::Module() : ngs::Module(ngs::BussType::BUSS_NORMAL_PLAYER) { }
 
     void Module::process(const MemState &mem, Voice *voice) {
         Parameters *params = voice->get_parameters<Parameters>(mem);

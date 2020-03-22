@@ -6,8 +6,12 @@ namespace ngs::atrac9 {
     std::unique_ptr<ngs::Module> VoiceDefinition::new_module() {
         return std::make_unique<Module>();
     }
+
+    std::size_t VoiceDefinition::get_buffer_parameter_size() const {
+        return sizeof(Parameters);
+    }
     
-    Module::Module() : ngs::Module(ngs::BUSS_ATRAC9) { }
+    Module::Module() : ngs::Module(ngs::BussType::BUSS_ATRAC9) { }
 
     void get_buffer_parameter(const std::uint32_t start_sample, const std::uint32_t 
         num_samples, const std::uint32_t info, SkipBufferInfo &parameter) {
