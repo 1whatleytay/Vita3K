@@ -132,7 +132,7 @@ namespace ngs {
         PCMBuf *get_input_buffer_queue(const std::int32_t index, const std::int32_t subindex);
 
         // Return subindex
-        std::int32_t receive(const std::int32_t index, const std::int32_t subindex, std::uint8_t **data,
+        std::int32_t receive(const std::int32_t index, const std::int32_t subindex, const std::uint8_t **data,
             const std::int16_t channel_count, const std::size_t size_each);
 
         bool free_input(const std::int32_t index, const std::int32_t subindex);
@@ -215,7 +215,8 @@ namespace ngs {
         static std::uint32_t get_required_memspace_size(SystemInitParameters *parameters);
     };
 
-    bool route(const MemState &mem, Voice *source, std::uint8_t **const output_data, const std::uint16_t output_channels, const std::uint32_t sample_count, const int freq, AudioDataType output_type);
+    bool route(const MemState &mem, Voice *source, const std::uint8_t *output_data, const std::uint16_t output_channels,
+        const std::uint32_t sample_count, const int freq, AudioDataType output_type);
     bool unroute_occupied(const MemState &mem, Voice *source);
     
     bool init_system(State &ngs, const MemState &mem, SystemInitParameters *parameters, Ptr<void> memspace, const std::uint32_t memspace_size);

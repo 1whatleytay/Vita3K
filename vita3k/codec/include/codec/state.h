@@ -90,7 +90,7 @@ struct Atrac9DecoderState : public DecoderState {
     uint32_t config_data;
 
     uint32_t get_channel_count();
-    uint32_t get_sample_per_superframe();
+    uint32_t get_samples_per_superframe();
     uint32_t get_block_align();
     uint32_t get_frames_in_superframe();
     uint32_t get_superframe_size();

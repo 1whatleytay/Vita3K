@@ -38,10 +38,7 @@ namespace ngs::player {
     };
 
     struct VoiceDefinition: public ngs::VoiceDefinition {
-        std::size_t get_buffer_parameter_size() const override {
-            return sizeof(Parameters);
-        }
-
         std::unique_ptr<ngs::Module> new_module() override;
+        std::size_t get_buffer_parameter_size() const override;
     };
 };

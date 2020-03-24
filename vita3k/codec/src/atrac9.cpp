@@ -68,7 +68,7 @@ uint32_t Atrac9DecoderState::get_channel_count() {
     return total_channels;
 }
 
-uint32_t Atrac9DecoderState::get_sample_per_superframe() {
+uint32_t Atrac9DecoderState::get_samples_per_superframe() {
     const std::uint8_t superframe_index = (config_data & (0b11 << 27)) >> 27;
     const std::uint8_t sample_rate_index = ((config_data & (0b1111 << 12)) >> 12);
     const std::uint32_t frame_per_superframe = 1 << superframe_index;
@@ -85,7 +85,7 @@ uint32_t Atrac9DecoderState::get_sample_per_superframe() {
 
 uint32_t Atrac9DecoderState::get_block_align() {
     // How many channel presents?
-    return get_sample_per_superframe() * 4 * get_channel_count();
+    return get_samples_per_superframe() * 4 * get_channel_count();
 }
 
 uint32_t Atrac9DecoderState::get_frames_in_superframe() {
@@ -105,7 +105,7 @@ uint32_t Atrac9DecoderState::get(DecoderQuery query) {
         case DecoderQuery::BIT_RATE: return context->bit_rate;
         case DecoderQuery::SAMPLE_RATE: return context->sample_rate;
         case DecoderQuery::AT9_BLOCK_ALIGN: return get_block_align();
-        case DecoderQuery::AT9_SAMPLE_PER_SUPERFRAME: return get_sample_per_superframe();
+        case DecoderQuery::AT9_SAMPLE_PER_SUPERFRAME: return get_samples_per_superframe();
         case DecoderQuery::AT9_FRAMES_IN_SUPERFRAME: return get_frames_in_superframe();
         case DecoderQuery::AT9_SUPERFRAME_SIZE: return get_superframe_size();
         default: return 0;

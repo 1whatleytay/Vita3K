@@ -3,6 +3,10 @@
 #include <cassert>
 
 namespace ngs::player {
+    std::size_t VoiceDefinition::get_buffer_parameter_size() const {
+        return sizeof(Parameters);
+    }
+
     std::unique_ptr<ngs::Module> VoiceDefinition::new_module() {
         return std::make_unique<Module>();
     }

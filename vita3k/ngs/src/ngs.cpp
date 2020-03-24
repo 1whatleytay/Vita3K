@@ -3,6 +3,7 @@
 #include <ngs/modules/atrac9.h>
 #include <ngs/modules/master.h>
 #include <ngs/modules/player.h>
+#include <ngs/modules/reverb.h>
 #include <mem/mem.h>
 
 #include <util/log.h>
@@ -34,7 +35,7 @@ namespace ngs {
         return &inputs[index].bufs[subindex];
     }
 
-    std::int32_t VoiceInputManager::receive(const std::int32_t index, const std::int32_t subindex, std::uint8_t **data,
+    std::int32_t VoiceInputManager::receive(const std::int32_t index, const std::int32_t subindex, const std::uint8_t **data,
         const std::int16_t channel_count, const std::size_t size_each) {
         if (index >= inputs.size()) {
             return -1;
@@ -345,6 +346,8 @@ namespace ngs {
                 return ngs.alloc_and_init<ngs::player::VoiceDefinition>(mem);
             case ngs::BussType::BUSS_MASTER:
                 return ngs.alloc_and_init<ngs::master::VoiceDefinition>(mem);
+            case ngs::BussType::BUSS_REVERB:
+                return ngs.alloc_and_init<ngs::reverb::VoiceDefinition>(mem);
 
             default:
                 LOG_ERROR("Missing voice definition for Buss Type {}.", static_cast<uint32_t>(type));
