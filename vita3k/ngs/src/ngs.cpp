@@ -3,7 +3,7 @@
 #include <ngs/modules/atrac9.h>
 #include <ngs/modules/master.h>
 #include <ngs/modules/player.h>
-#include <ngs/modules/reverb.h>
+#include <ngs/modules/passthrough.h>
 #include <mem/mem.h>
 
 #include <util/log.h>
@@ -325,12 +325,10 @@ namespace ngs {
                 return ngs.alloc_and_init<ngs::player::VoiceDefinition>(mem);
             case ngs::BussType::BUSS_MASTER:
                 return ngs.alloc_and_init<ngs::master::VoiceDefinition>(mem);
-            case ngs::BussType::BUSS_REVERB:
-                return ngs.alloc_and_init<ngs::reverb::VoiceDefinition>(mem);
 
             default:
-                LOG_ERROR("Missing voice definition for Buss Type {}.", static_cast<uint32_t>(type));
-                return Ptr<VoiceDefinition>();
+                LOG_ERROR("Missing voice definition for Buss Type {}, using passthrough.", static_cast<uint32_t>(type));
+                return ngs.alloc_and_init<ngs::passthrough::VoiceDefinition>(mem);
         }
     }
 }
