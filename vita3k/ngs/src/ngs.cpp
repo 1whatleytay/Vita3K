@@ -327,7 +327,7 @@ namespace ngs {
                 return ngs.alloc_and_init<ngs::master::VoiceDefinition>(mem);
 
             default:
-                LOG_ERROR("Missing voice definition for Buss Type {}, using passthrough.", static_cast<uint32_t>(type));
+                LOG_WARN("Missing voice definition for Buss Type {}, using passthrough.", static_cast<uint32_t>(type));
                 return ngs.alloc_and_init<ngs::passthrough::VoiceDefinition>(mem);
         }
     }

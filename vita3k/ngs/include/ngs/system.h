@@ -116,6 +116,9 @@ namespace ngs {
     struct Voice {
         Rack *rack;
 
+        Ptr<void> callback;
+        Ptr<void> user_data;
+
         BufferParamsInfo info;
         std::vector<std::uint8_t> last_info;
         VoiceState state;
@@ -181,7 +184,7 @@ namespace ngs {
     };
 
     struct System: public MempoolObject {
-        std::vector<Rack*> racks;
+        std::vector<Rack *> racks;
         std::int32_t max_voices;
         std::int32_t granularity;
         std::int32_t sample_rate;
