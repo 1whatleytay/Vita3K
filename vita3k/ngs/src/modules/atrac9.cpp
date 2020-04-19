@@ -62,7 +62,8 @@ namespace ngs::atrac9 {
         //const std::uint32_t sample_per_superframe = calculate_sample_per_superframe(params->config_data);
 
         // making this maybe to early...
-        decoder = std::make_unique<Atrac9DecoderState>(params->config_data);
+        if (!decoder)
+            decoder = std::make_unique<Atrac9DecoderState>(params->config_data);
 
         if (static_cast<std::int32_t>(decoded_samples_pending) < voice->rack->system->granularity) {
             // Ran out of data, supply new
