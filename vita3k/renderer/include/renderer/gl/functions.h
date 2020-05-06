@@ -21,7 +21,6 @@
 #include <glutil/object.h>
 #include <gxm/types.h>
 
-#include <renderer/gl/state.h>
 #include <renderer/gl/types.h>
 
 #include <map>
@@ -46,13 +45,9 @@ std::string load_shader(const SceGxmProgram &program, const FeatureState &featur
 bool set_uniform(GLuint program, const SceGxmProgram &shader_program, GLShaderStatics &statics, const MemState &mem,
     const SceGxmProgramParameter *parameter, const void *data, bool log_uniforms);
 
+/*
 bool set_uniform_buffer(GLContext &context, const bool vertex_shader, const int block_num, const int size, const void *data);
 
-bool create(WindowPtr &window, std::unique_ptr<renderer::State> &state);
-bool create(std::unique_ptr<Context> &context);
-bool create(std::unique_ptr<RenderTarget> &rt, const SceGxmRenderTargetParams &params, const FeatureState &features);
-bool create(std::unique_ptr<FragmentProgram> &fp, GLState &state, const SceGxmProgram &program, const SceGxmBlendInfo *blend, GXPPtrMap &gxp_ptr_map, const char *base_path, const char *title_id);
-bool create(std::unique_ptr<VertexProgram> &vp, GLState &state, const SceGxmProgram &program, GXPPtrMap &gxp_ptr_map, const char *base_path, const char *title_id);
 bool sync_state(GLContext &context, const GxmContextState &state, const MemState &mem, bool enable_texture_cache, bool hardware_flip);
 void sync_rendertarget(const GLRenderTarget &rt);
 void set_context(GLContext &ctx, GxmContextState &state, const GLRenderTarget *rt, const FeatureState &features);
@@ -62,24 +57,23 @@ void draw(GLState &renderer, GLContext &context, GxmContextState &state, const F
     const bool log_active_shaders, const bool log_uniforms, const bool do_hardware_flip);
 
 void upload_vertex_stream(GLContext &context, const std::size_t stream_index, const std::size_t length, const void *data);
-
+*/
 // State
-void sync_viewport(GLContext &context, const GxmContextState &state, const bool hardware_flip);
-void sync_clipping(GLContext &context, const GxmContextState &state, const bool hardware_flip);
-void sync_cull(GLContext &context, const GxmContextState &state);
-void sync_front_depth_func(const GxmContextState &state);
-void sync_front_depth_write_enable(const GxmContextState &state);
-bool sync_depth_data(const GxmContextState &state);
-bool sync_stencil_data(const GxmContextState &state);
-void sync_stencil_func(const GxmContextState &state, bool is_back_stencil);
-void sync_front_polygon_mode(const GxmContextState &state);
-void sync_front_point_line_width(const GxmContextState &state);
-void sync_front_depth_bias(const GxmContextState &state);
-void sync_blending(const GxmContextState &state, const MemState &mem);
-void sync_texture(GLContext &context, const GxmContextState &state, const MemState &mem, std::size_t index,
-    bool enable_texture_cache);
-void sync_vertex_attributes(GLContext &context, const GxmContextState &state, const MemState &mem);
-void bind_fundamental(GLContext &context);
+//void sync_viewport(GLContext &context, const GxmContextState &state, const bool hardware_flip);
+//void sync_clipping(GLContext &context, const GxmContextState &state, const bool hardware_flip);
+//void sync_cull(GLContext &context, const GxmContextState &state);
+//void sync_front_depth_func(const GxmContextState &state);
+//void sync_front_depth_write_enable(const GxmContextState &state);
+//bool sync_depth_data(const GxmContextState &state);
+//bool sync_stencil_data(const GxmContextState &state);
+//void sync_stencil_func(const GxmContextState &state, bool is_back_stencil);
+//void sync_front_polygon_mode(const GxmContextState &state);
+//void sync_front_point_line_width(const GxmContextState &state);
+//void sync_front_depth_bias(const GxmContextState &state);
+//void sync_blending(const GxmContextState &state, const MemState &mem);
+//void sync_texture(GLContext &context, const GxmContextState &state, const MemState &mem, std::size_t index, bool enable_texture_cache);
+//void sync_vertex_attributes(GLContext &context, const GxmContextState &state, const MemState &mem);
+//void bind_fundamental(GLContext &context);
 
 struct GLTextureCacheState;
 struct TextureCacheState;

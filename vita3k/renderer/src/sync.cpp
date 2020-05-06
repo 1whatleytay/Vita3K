@@ -1,7 +1,7 @@
 #include <chrono>
 #include <gxm/types.h>
 #include <renderer/commands.h>
-#include <renderer/state.h>
+#include <renderer/renderer.h>
 #include <renderer/types.h>
 
 #include "driver_functions.h"
@@ -13,32 +13,13 @@
 namespace renderer {
 COMMAND(handle_nop) {
     // Signal back to client
-    int code_to_finish = helper.pop<int>();
-    complete_command(renderer, helper, code_to_finish);
+    int code_to_finish = command.pop<int>();
+    renderer.complete(command, code_to_finish);
 }
 
 COMMAND(handle_signal_sync_object) {
-    SceGxmSyncObject *sync = helper.pop<Ptr<SceGxmSyncObject>>().get(mem);
+    SceGxmSyncObject *sync = command.pop<Ptr<SceGxmSyncObject>>().get(mem);
     renderer::subject_done(sync, renderer::SyncObjectSubject::Fragment);
-}
-
-// Client side function
-void finish(State &state, Context &context) {
-    // Wait for the code
-    wait_for_status(state, &context.render_finish_status);
-}
-
-int wait_for_status(State &state, int *result_code) {
-    if (*result_code != CommandErrorCodePending) {
-        // Signaled, return
-        return *result_code;
-    }
-
-    // Wait for it to get signaled
-    std::unique_lock<std::mutex> finish_mutex(state.command_finish_one_mutex);
-    state.command_finish_one.wait(finish_mutex, [&]() { return *result_code != CommandErrorCodePending; });
-
-    return *result_code;
 }
 
 void wishlist(SceGxmSyncObject *sync_object, const SyncObjectSubject subjects) {
@@ -66,12 +47,5 @@ void subject_done(SceGxmSyncObject *sync_object, const SyncObjectSubject subject
 void subject_in_progress(SceGxmSyncObject *sync_object, const SyncObjectSubject subjects) {
     const std::lock_guard<std::mutex> mutex_guard(sync_object->lock);
     sync_object->done &= ~subjects;
-}
-
-void submit_command_list(State &state, renderer::Context *context, GxmContextState *context_state,
-    CommandList &command_list) {
-    command_list.context = context;
-    command_list.gxm_context = context_state;
-    state.command_buffer_queue.push(std::move(command_list));
 }
 } // namespace renderer

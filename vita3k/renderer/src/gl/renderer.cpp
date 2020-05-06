@@ -1,10 +1,8 @@
-#include <renderer/functions.h>
-#include <renderer/profile.h>
-#include <renderer/state.h>
 #include <renderer/types.h>
+#include <renderer/profile.h>
 
-#include <renderer/gl/functions.h>
 #include <renderer/gl/types.h>
+#include <renderer/gl/renderer.h>
 
 #include <shader/usse_program_analyzer.h>
 
@@ -187,123 +185,6 @@ static void debug_output_callback(GLenum source, GLenum type, GLuint id, GLenum 
     LOG_DEBUG("[OPENGL - {} - {}] {}", type_str, severity_fmt, message);
 }
 
-bool create(WindowPtr &window, std::unique_ptr<State> &state) {
-    auto &gl_state = dynamic_cast<GLState &>(*state);
-
-    // Recursively create GL version until one accepts
-    // Major 4 is mandantory
-    const int accept_gl_version[] = {
-        5, // OpenGL 4.5
-        3, // OpenGL 4.3
-        2, // OpenGL 4.2
-        1 // OpenGL 4.1
-    };
-
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-
-    int choosen_minor_version = 0;
-
-    for (int i = 0; i < sizeof(accept_gl_version) / sizeof(int); i++) {
-        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, accept_gl_version[i]);
-
-        gl_state.context = GLContextPtr(SDL_GL_CreateContext(window.get()), SDL_GL_DeleteContext);
-        if (gl_state.context) {
-            choosen_minor_version = accept_gl_version[i];
-            break;
-        }
-    }
-
-    if (!gl_state.context)
-        return false;
-
-    // Try adaptive vsync first, falling back to regular vsync.
-    if (SDL_GL_SetSwapInterval(-1) < 0) {
-        SDL_GL_SetSwapInterval(1);
-    }
-    LOG_INFO("Swap interval = {}", SDL_GL_GetSwapInterval());
-
-    gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress);
-#if MICROPROFILE_ENABLED != 0
-    glad_set_pre_callback(before_callback);
-#endif // MICROPROFILE_ENABLED
-    glad_set_post_callback(after_callback);
-
-    // Detect GPU and features
-    const std::string gpu_name = reinterpret_cast<const GLchar *>(glGetString(GL_RENDERER));
-    const std::string version = reinterpret_cast<const GLchar *>(glGetString(GL_SHADING_LANGUAGE_VERSION));
-
-    LOG_INFO("GPU = {}", gpu_name);
-    LOG_INFO("GL_VERSION = {}", glGetString(GL_VERSION));
-    LOG_INFO("GL_SHADING_LANGUAGE_VERSION = {}", version);
-
-    // Try to parse and get version
-    const std::size_t dot_pos = version.find_first_of('.');
-
-    if (dot_pos != std::string::npos) {
-        const std::string major = version.substr(0, dot_pos);
-        const std::string minor = version.substr(dot_pos + 1);
-
-        gl_state.features.direct_pack_unpack_half = false;
-
-        if (std::atoi(major.c_str()) >= 4 && minor.length() >= 1) {
-            if (minor[0] >= '2') {
-                gl_state.features.direct_pack_unpack_half = true;
-            }
-        }
-    }
-
-    if (choosen_minor_version >= 3) {
-        glDebugMessageCallback(reinterpret_cast<GLDEBUGPROC>(debug_output_callback), nullptr);
-    }
-
-    int total_extensions = 0;
-    glGetIntegerv(GL_NUM_EXTENSIONS, &total_extensions);
-
-    std::unordered_map<std::string, bool *> check_extensions = {
-        { "GL_ARB_fragment_shader_interlock", &gl_state.features.support_shader_interlock },
-        { "GL_ARB_texture_barrier", &gl_state.features.support_texture_barrier },
-        { "GL_EXT_shader_framebuffer_fetch", &gl_state.features.direct_fragcolor },
-        { "GL_ARB_shading_language_packing", &gl_state.features.pack_unpack_half_through_ext }
-    };
-
-    for (int i = 0; i < total_extensions; i++) {
-        const std::string extension = reinterpret_cast<const GLchar *>(glGetStringi(GL_EXTENSIONS, i));
-        auto find_result = check_extensions.find(extension);
-
-        if (find_result != check_extensions.end()) {
-            *find_result->second = true;
-            check_extensions.erase(find_result);
-        }
-    }
-
-    if (gl_state.features.direct_fragcolor) {
-        LOG_INFO("Your GPU supports direct access to last fragment color. Your performance with programmable blending games will be optimized.");
-    } else if (gl_state.features.support_shader_interlock) {
-        LOG_INFO("Your GPU supports shader interlock, some games that use programmable blending will have better performance.");
-    } else if (gl_state.features.support_texture_barrier) {
-        LOG_INFO("Your GPU only supports texture barrier, performance may not be good on programmable blending games.");
-        LOG_WARN("Consider updating to GPU that has shader interlock.");
-    } else {
-        LOG_INFO("Your GPU doesn't support extensions that make programmable blending possible. Some games may have broken graphics.");
-        LOG_WARN("Consider updating your graphics drivers or upgrading your GPU.");
-    }
-
-    gl_state.features.use_ubo = true;
-
-    return true;
-}
-
-bool create(std::unique_ptr<Context> &context) {
-    R_PROFILE(__func__);
-
-    context = std::make_unique<GLContext>();
-    GLContext *gl_context = reinterpret_cast<GLContext *>(context.get());
-
-    return !(!texture::init(gl_context->texture_cache) || !gl_context->vertex_array.init(reinterpret_cast<renderer::Generator *>(glGenVertexArrays), reinterpret_cast<renderer::Deleter *>(glDeleteVertexArrays)) || !gl_context->element_buffer.init(reinterpret_cast<renderer::Generator *>(glGenBuffers), reinterpret_cast<renderer::Deleter *>(glDeleteBuffers)) || !gl_context->stream_vertex_buffers.init(reinterpret_cast<renderer::Generator *>(glGenBuffers), reinterpret_cast<renderer::Deleter *>(glDeleteBuffers))
-        || !gl_context->uniform_buffer.init(reinterpret_cast<renderer::Generator *>(glGenBuffers), reinterpret_cast<renderer::Deleter *>(glDeleteBuffers)));
-}
-
 bool create(std::unique_ptr<RenderTarget> &rt, const SceGxmRenderTargetParams &params, const FeatureState &features) {
     R_PROFILE(__func__);
 
@@ -484,6 +365,136 @@ void upload_vertex_stream(GLContext &context, const std::size_t stream_index, co
     glBufferData(GL_ARRAY_BUFFER, length, data, GL_DYNAMIC_DRAW);
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
+}
+
+GLContext::GLContext(Renderer *renderer, GxmContextState *context_state) : Context(renderer, context_state) { }
+
+std::unique_ptr<Context> GLRenderer::create_context() {
+    R_PROFILE(__func__);
+
+    // TODO: not NULLPTR
+    std::unique_ptr<GLContext> context = std::make_unique<GLContext>(this, nullptr);
+
+    if (!texture::init(context->texture_cache))
+        return nullptr;
+
+    if (!context->vertex_array.init(glGenVertexArrays, glDeleteVertexArrays))
+        return nullptr;
+
+    if (!context->element_buffer.init(glGenBuffers, glDeleteBuffers))
+        return nullptr;
+
+    if (!context->stream_vertex_buffers.init(glGenBuffers, glDeleteBuffers))
+        return nullptr;
+
+    if (!context->uniform_buffer.init(glGenBuffers, glDeleteBuffers))
+        return nullptr;
+
+    return context;
+}
+
+GLRenderer::GLRenderer(const WindowPtr &window) : Renderer(Backend::OpenGL) {
+    // Recursively create GL version until one accepts
+    // Major 4 is mandantory
+    const int accept_gl_version[] = {
+        5, // OpenGL 4.5
+        3, // OpenGL 4.3
+        2, // OpenGL 4.2
+        1 // OpenGL 4.1
+    };
+
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+
+    int choosen_minor_version = 0;
+
+    for (int i = 0; i < sizeof(accept_gl_version) / sizeof(int); i++) {
+        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, accept_gl_version[i]);
+
+        gl_context = GLContextPtr(SDL_GL_CreateContext(window.get()), SDL_GL_DeleteContext);
+        if (gl_context) {
+            choosen_minor_version = accept_gl_version[i];
+            break;
+        }
+    }
+
+    // TODO: this needs to be caught
+    if (!gl_context)
+        throw std::runtime_error("Could not initialize OpenGL context.");
+
+    // Try adaptive vsync first, falling back to regular vsync.
+    if (SDL_GL_SetSwapInterval(-1) < 0) {
+        SDL_GL_SetSwapInterval(1);
+    }
+    LOG_INFO("Swap interval = {}", SDL_GL_GetSwapInterval());
+
+    gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress);
+#if MICROPROFILE_ENABLED != 0
+    glad_set_pre_callback(before_callback);
+#endif // MICROPROFILE_ENABLED
+    glad_set_post_callback(after_callback);
+
+    // Detect GPU and features
+    const std::string gpu_name = reinterpret_cast<const GLchar *>(glGetString(GL_RENDERER));
+    const std::string version = reinterpret_cast<const GLchar *>(glGetString(GL_SHADING_LANGUAGE_VERSION));
+
+        LOG_INFO("GPU = {}", gpu_name);
+        LOG_INFO("GL_VERSION = {}", glGetString(GL_VERSION));
+        LOG_INFO("GL_SHADING_LANGUAGE_VERSION = {}", version);
+
+    // Try to parse and get version
+    const std::size_t dot_pos = version.find_first_of('.');
+
+    if (dot_pos != std::string::npos) {
+        const std::string major = version.substr(0, dot_pos);
+        const std::string minor = version.substr(dot_pos + 1);
+
+        features.direct_pack_unpack_half = false;
+
+        if (std::atoi(major.c_str()) >= 4 && minor.length() >= 1) {
+            if (minor[0] >= '2') {
+                features.direct_pack_unpack_half = true;
+            }
+        }
+    }
+
+    if (choosen_minor_version >= 3) {
+        glDebugMessageCallback(reinterpret_cast<GLDEBUGPROC>(debug_output_callback), nullptr);
+    }
+
+    int total_extensions = 0;
+    glGetIntegerv(GL_NUM_EXTENSIONS, &total_extensions);
+
+    std::unordered_map<std::string, bool *> check_extensions = {
+        { "GL_ARB_fragment_shader_interlock", &features.support_shader_interlock },
+        { "GL_ARB_texture_barrier", &features.support_texture_barrier },
+        { "GL_EXT_shader_framebuffer_fetch", &features.direct_fragcolor },
+        { "GL_ARB_shading_language_packing", &features.pack_unpack_half_through_ext }
+    };
+
+    for (int i = 0; i < total_extensions; i++) {
+        const std::string extension = reinterpret_cast<const GLchar *>(glGetStringi(GL_EXTENSIONS, i));
+        auto find_result = check_extensions.find(extension);
+
+        if (find_result != check_extensions.end()) {
+            *find_result->second = true;
+            check_extensions.erase(find_result);
+        }
+    }
+
+    if (features.direct_fragcolor) {
+        LOG_INFO("Your GPU supports direct access to last fragment color. Your performance with programmable blending games will be optimized.");
+    } else if (features.support_shader_interlock) {
+        LOG_INFO("Your GPU supports shader interlock, some games that use programmable blending will have better performance.");
+    } else if (features.support_texture_barrier) {
+        LOG_INFO("Your GPU only supports texture barrier, performance may not be good on programmable blending games.");
+        LOG_WARN("Consider updating to GPU that has shader interlock.");
+    } else {
+        LOG_INFO("Your GPU doesn't support extensions that make programmable blending possible. Some games may have broken graphics.");
+        LOG_WARN("Consider updating your graphics drivers or upgrading your GPU.");
+    }
+
+    features.use_ubo = true;
 }
 
 } // namespace renderer::gl

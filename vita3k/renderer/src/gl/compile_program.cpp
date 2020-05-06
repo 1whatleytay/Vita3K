@@ -1,13 +1,15 @@
-#include <renderer/profile.h>
 #include <renderer/types.h>
+#include <renderer/profile.h>
 
-#include <renderer/gl/functions.h>
 #include <renderer/gl/types.h>
+#include <renderer/gl/functions.h>
 
 #include <gxm/types.h>
-#include <util/log.h>
-
 #include <gxm/functions.h>
+
+#include <util/log.h>
+#include <features/state.h>
+
 #include <vector>
 
 namespace renderer::gl {

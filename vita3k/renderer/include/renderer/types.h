@@ -4,7 +4,6 @@
 #include <glutil/object.h>
 #include <glutil/object_array.h>
 #include <gxm/types.h>
-#include <renderer/commands.h>
 
 #include <array>
 #include <map>
@@ -35,8 +34,6 @@ typedef std::map<GLuint, GLenum> UniformTypes;
 
 // State types
 typedef std::map<Sha256Hash, const SceGxmProgram *> GXPPtrMap;
-
-struct CommandBuffer;
 
 enum class Backend {
     OpenGL,
@@ -72,12 +69,6 @@ enum SyncObjectSubject : std::uint32_t {
 };
 
 struct RenderTarget;
-
-struct Context {
-    const RenderTarget *current_render_target{};
-    CommandList command_list;
-    int render_finish_status = 0;
-};
 
 struct ShaderProgram {
     std::string hash;

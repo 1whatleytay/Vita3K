@@ -2,9 +2,8 @@
 #include <renderer/profile.h>
 
 #include <renderer/gl/functions.h>
-#include <renderer/gl/state.h>
+#include <renderer/gl/renderer.h>
 
-#include <renderer/state.h>
 #include <renderer/types.h>
 
 #include <gxm/types.h>
@@ -35,24 +34,32 @@ static GLenum translate_primitive(SceGxmPrimitiveType primType) {
     return GL_TRIANGLES;
 }
 
-void draw(GLState &renderer, GLContext &context, GxmContextState &state, const FeatureState &features, SceGxmPrimitiveType type, SceGxmIndexFormat format, const void *indices, size_t count, const MemState &mem,
-    const char *base_path, const char *title_id, const bool log_active_shaders, const bool log_uniforms, const bool do_hardware_flip) {
+
+void GLContext::draw(SceGxmPrimitiveType prim_type, SceGxmIndexFormat index_type, const void *index_data, const std::uint32_t index_count) {
     R_PROFILE(__func__);
 
-    GLuint program_id = context.last_draw_program;
+    GLuint program_id = last_draw_program;
+
+    const Ptr<SceGxmVertexProgram> last_vertex = state->last_draw_vertex_program;
+    const Ptr<SceGxmFragmentProgram> last_fragment = state->last_draw_fragment_program;
+    const Ptr<SceGxmVertexProgram> vertex = state->vertex_program;
+    const Ptr<SceGxmFragmentProgram> fragment = state->fragment_program;
+
 
     // Trying to cache: the last time vs this time shader pair. Does it different somehow?
     // If it's different, we need to switch. Else just stick to it.
     // Pass 1: Check pointer.
-    if (state.last_draw_vertex_program.address() != state.vertex_program.address() || state.last_draw_fragment_program.address() != state.fragment_program.address()) {
+    if (last_vertex.address() != vertex.address() || last_fragment.address() != fragment.address()) {
         // Pass 2: Check content
-        if (!state.last_draw_vertex_program || !state.last_draw_fragment_program || (state.last_draw_vertex_program.get(mem)->renderer_data->hash != state.vertex_program.get(mem)->renderer_data->hash) || (state.last_draw_fragment_program.get(mem)->renderer_data->hash != state.fragment_program.get(mem)->renderer_data->hash)) {
+        if (!last_vertex || !last_fragment
+            || (last_vertex.get(mem)->renderer_data->hash != vertex.get(mem)->renderer_data->hash)
+            || (last_fragment.get(mem)->renderer_data->hash != fragment.get(mem)->renderer_data->hash)) {
             // Need to recompile!
             SharedGLObject program = gl::compile_program(renderer.program_cache, renderer.vertex_shader_cache,
-                renderer.fragment_shader_cache, state, features, mem, base_path, title_id);
+                                                         renderer.fragment_shader_cache, state, features, mem, base_path, title_id);
 
             if (!program) {
-                LOG_ERROR("Fail to get program!");
+                    LOG_ERROR("Fail to get program!");
             }
 
             // Use it
@@ -69,7 +76,7 @@ void draw(GLState &renderer, GLContext &context, GxmContextState &state, const F
         const std::string hash_text_f = hex_string(state.fragment_program.get(mem)->renderer_data->hash);
         const std::string hash_text_v = hex_string(state.vertex_program.get(mem)->renderer_data->hash);
 
-        LOG_DEBUG("\nVertex  : {}\nFragment: {}", hash_text_v, hash_text_f);
+            LOG_DEBUG("\nVertex  : {}\nFragment: {}", hash_text_v, hash_text_f);
     }
 
     if (!program_id) {
@@ -93,14 +100,14 @@ void draw(GLState &renderer, GLContext &context, GxmContextState &state, const F
 
         for (auto &vertex_uniform : context.vertex_set_requests) {
             gl::set_uniform(program_id, vertex_program_gxp, vertex_gl_statics, mem, vertex_uniform.parameter, vertex_uniform.data,
-                log_uniforms);
+                            log_uniforms);
 
             delete vertex_uniform.data;
         }
 
         for (auto &fragment_uniform : context.fragment_set_requests) {
             gl::set_uniform(program_id, fragment_program_gxp, fragment_gl_statics, mem, fragment_uniform.parameter,
-                fragment_uniform.data, log_uniforms);
+                            fragment_uniform.data, log_uniforms);
 
             delete fragment_uniform.data;
         }
@@ -151,7 +158,7 @@ void draw(GLState &renderer, GLContext &context, GxmContextState &state, const F
     const GLenum gl_type = format == SCE_GXM_INDEX_FORMAT_U16 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT;
     glDrawElements(mode, static_cast<GLsizei>(count), gl_type, nullptr);
 
-    state.last_draw_vertex_program = state.vertex_program;
-    state.last_draw_fragment_program = state.fragment_program;
+    state->last_draw_vertex_program = state->vertex_program;
+    state->last_draw_fragment_program = state->fragment_program;
 }
 } // namespace renderer::gl

@@ -1,8 +1,10 @@
-#include <renderer/functions.h>
-#include <renderer/state.h>
+#include <renderer/renderer.h>
+
 #include <renderer/types.h>
 
-#include <cstring>
+#include "driver_functions.h"
+
+#include <util/log.h>
 
 namespace renderer {
 /**
@@ -11,7 +13,7 @@ namespace renderer {
      * 
      * The switch is reserved for backend like Vulkan, when building a command buffer directly is possible.
      */
-
+/*
 void set_depth_bias(State &state, Context *ctx, GxmContextState *gxm_context, bool is_front, int factor, int units) {
     switch (state.current_backend) {
     default:
@@ -163,7 +165,7 @@ bool create_context(State &state, std::unique_ptr<Context> &context) {
         return renderer::send_single_command(state, nullptr, nullptr, renderer::CommandOpcode::CreateContext, &context);
     }
 }
-
+context
 bool create_render_target(State &state, std::unique_ptr<RenderTarget> &rt, const SceGxmRenderTargetParams *params) {
     switch (state.current_backend) {
     default:
@@ -200,5 +202,91 @@ void set_uniform_buffer(State &state, Context *ctx, const bool is_vertex_uniform
         break;
     }
     }
+}
+*/
+
+void Context::process_batch(MemState &mem, Config &config, CommandList &list, const char *base_path, const char *title_id) {
+    static std::map<CommandOpcode, CommandHandlerFunc> handlers = {
+        { CommandOpcode::SetContext, cmd_handle_set_context },
+        { CommandOpcode::SyncSurfaceData, cmd_handle_sync_surface_data },
+        { CommandOpcode::CreateContext, cmd_handle_create_context },
+        { CommandOpcode::CreateRenderTarget, cmd_handle_create_render_target },
+        { CommandOpcode::Draw, cmd_handle_draw },
+        { CommandOpcode::Nop, cmd_handle_nop },
+        { CommandOpcode::SetState, cmd_handle_set_state },
+        { CommandOpcode::SignalSyncObject, cmd_handle_signal_sync_object },
+        { CommandOpcode::DestroyRenderTarget, cmd_handle_destroy_render_target }
+    };
+
+    Command *cmd = list.first;
+
+    // Take a batch, and execute it. Hope it's not too large
+    while (true) {
+        if (cmd == nullptr)
+            break;
+
+        auto handler = handlers.find(cmd->opcode);
+        if (handler == handlers.end()) {
+            LOG_ERROR("Unimplemented command opcode {}", static_cast<int>(cmd->opcode));
+        } else {
+            handler->second(*parent, mem, config, *cmd, parent->features, list.context,
+                list.gxm_context, base_path, title_id);
+        }
+
+        Command *last_cmd = cmd;
+        cmd = cmd->next;
+
+        delete last_cmd;
+    }
+}
+
+void Context::process_batches(MemState &mem, Config &config, const char *base_path, const char *title_id) {
+    std::uint32_t processed_count = 0;
+
+    while (processed_count < parent->average_scene_per_frame) {
+        auto cmd_list = parent->command_buffer_queue.pop(2);
+
+        if (!cmd_list) {
+            // Try to wait for a batch (about 1 or 2ms, game should be fast for this)
+            return;
+        }
+
+        process_batch(mem, config, *cmd_list, base_path, title_id);
+        processed_count++;
+    }
+}
+
+void Context::submit(CommandList &list) {
+    list.context = this;
+    list.gxm_context = state;
+    parent->command_buffer_queue.push(list);
+}
+
+void Context::finish() {
+    parent->wait_for_status(&render_finish_status);
+}
+
+Context::Context(Renderer *parent, GxmContextState *context_state) : parent(parent), state(context_state) { }
+
+void Renderer::complete(Command &command, int code) {
+    command.complete(code);
+    command_finish_one.notify_all();
+}
+
+int Renderer::wait_for_status(int *result_code) {
+    if (*result_code != CommandErrorCodePending) {
+        // Signaled, return
+        return *result_code;
+    }
+
+    // Wait for it to get signaled
+    std::unique_lock<std::mutex> finish_mutex(command_finish_one_mutex);
+    command_finish_one.wait(finish_mutex, [&]() { return *result_code != CommandErrorCodePending; });
+
+    return *result_code;
+}
+
+Renderer::Renderer(Backend current_backend) : current_backend(current_backend) {
+    command_buffer_queue.maxPendingCount_ = 30;
 }
 } // namespace renderer

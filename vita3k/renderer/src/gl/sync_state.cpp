@@ -3,7 +3,7 @@
 #include <renderer/types.h>
 
 #include <renderer/gl/functions.h>
-#include <renderer/gl/state.h>
+#include <renderer/gl/renderer.h>
 #include <renderer/gl/types.h>
 
 #include <gxm/functions.h>

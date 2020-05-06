@@ -1,5 +1,3 @@
-#pragma once
-
 // Build allocator implementations.
 
 #define VMA_IMPLEMENTATION

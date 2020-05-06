@@ -1,7 +1,7 @@
 if (USE_VULKAN)
 	set(RENDERER_VULKAN_SOURCES
 		include/renderer/vulkan/types.h
-		include/renderer/vulkan/state.h
+		include/renderer/vulkan/renderer.h
 		include/renderer/vulkan/functions.h
 
 		src/vulkan/renderer.cpp
@@ -13,18 +13,16 @@ else()
 	set(RENDERER_VULKAN_LIBRARIES "")
 endif()
 
-add_library(
-	renderer
-	STATIC
+add_library(renderer STATIC
 	include/renderer/commands.h
 	include/renderer/functions.h
 	include/renderer/profile.h
-	include/renderer/state.h
 	include/renderer/texture_cache_state.h
 	include/renderer/types.h
+    include/renderer/renderer.h
 
 	include/renderer/gl/types.h
-	include/renderer/gl/state.h
+    include/renderer/gl/renderer.h
 	include/renderer/gl/functions.h
 
 	src/gl/attribute_formats.cpp

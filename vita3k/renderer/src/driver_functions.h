@@ -7,18 +7,18 @@ struct Config;
 struct FeatureState;
 
 namespace renderer {
-
-struct State;
 struct Command;
-struct CommandHelper;
 
-#define COMMAND(name)                                                                                \
-    void cmd_##name(renderer::State &renderer, MemState &mem, Config &config, CommandHelper &helper, \
+#define COMMAND(name)                                                                    \
+    void cmd_##name(Renderer &renderer, MemState &mem, Config &config, Command &command, \
         const FeatureState &features, Context *render_context, GxmContextState *state, const char *base_path, const char *title_id)
 
-#define COMMAND_SET_STATE(name)                                                                                \
-    void cmd_set_state_##name(renderer::State &renderer, MemState &mem, Config &config, CommandHelper &helper, \
+#define COMMAND_SET_STATE(name)                                                                    \
+    void cmd_set_state_##name(Renderer &renderer, MemState &mem, Config &config, Command &command, \
         Context *render_context, GxmContextState *state)
+
+using CommandHandlerFunc = std::function<void(renderer::Renderer &, MemState &, Config &,
+    Command &, const FeatureState &, Context *, GxmContextState *, const char *, const char *)>;
 
 COMMAND_SET_STATE(region_clip);
 COMMAND_SET_STATE(program);

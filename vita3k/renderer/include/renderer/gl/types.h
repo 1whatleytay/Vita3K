@@ -64,20 +64,6 @@ struct GLTextureCacheState : public renderer::TextureCacheState {
     GLObjectArray<TextureCacheSize> textures;
 };
 
-struct GLContext : public renderer::Context {
-    GLTextureCacheState texture_cache;
-    GLObjectArray<1> vertex_array;
-    GLObjectArray<1> element_buffer;
-    GLObjectArray<30> uniform_buffer;
-    GLObjectArray<SCE_GXM_MAX_VERTEX_STREAMS> stream_vertex_buffers;
-    GLuint last_draw_program{ 0 };
-
-    float viewport_flip[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
-
-    std::vector<UniformSetRequest> vertex_set_requests;
-    std::vector<UniformSetRequest> fragment_set_requests;
-};
-
 struct GLShaderStatics {
     ExcludedUniforms excluded_uniforms;
     UniformTypes uniform_types;
