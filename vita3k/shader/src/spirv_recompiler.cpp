@@ -699,7 +699,7 @@ static SpirvShaderParameters create_parameters(spv::Builder &b, const SceGxmProg
 
     spv::Id f32_v4_type = b.makeVectorType(f32_type, 4);
     spv::Id pa_arr_type = b.makeArrayType(f32_v4_type, b.makeIntConstant(32), 0);
-    spv::Id sa_arr_type = b.makeArrayType(f32_v4_type, b.makeIntConstant(32), 0);
+    spv::Id sa_arr_type = b.makeArrayType(f32_v4_type, b.makeIntConstant(40), 0);
     spv::Id i_arr_type = b.makeArrayType(f32_v4_type, b.makeIntConstant(3), 0);
     spv::Id temp_arr_type = b.makeArrayType(f32_v4_type, b.makeIntConstant(20), 0);
     spv::Id index_arr_type = b.makeArrayType(i32_type, b.makeIntConstant(2), 0);
@@ -746,6 +746,36 @@ static SpirvShaderParameters create_parameters(spv::Builder &b, const SceGxmProg
     // Empty them out
     for (auto &buffer : all_buffers_in_register) {
         buffer = nullptr;
+    }
+
+	for (size_t i = 0; i < program.uniform_buffer_count; ++i) {
+        const SceGxmProgramParameter &parameter = gxp_parameters[i];
+        const int buffer_size = match_uniform_buffer_with_buffer_size(program, parameter, buffers);
+
+		if (buffer_size != -1) {
+            const int base = gxp::get_uniform_buffer_base(program, parameter);
+
+            spv::Id block = create_uniform_block(b, features, 0,
+                buffer_size, !program.is_fragment());
+
+            // We found it. Make things
+            spv_params.buffers.emplace(base, block);
+        }
+
+		if (!program.parameter_count == 0) {
+            for (size_t i = 0; i < program.parameter_count; ++i) {
+                // Search for the buffer from analyzed list
+                if (buffer_size != -1) {
+                    const int base = gxp::get_uniform_buffer_base(program, parameter);
+
+                    spv::Id block = create_uniform_block(b, features, (parameter.resource_index + 1) % SCE_GXM_REAL_MAX_UNIFORM_BUFFER,
+                        buffer_size, !program.is_fragment());
+
+                    // We found it. Make things
+                    spv_params.buffers.emplace(base, block);
+                }
+            }
+        }
     }
 
     for (size_t i = 0; i < program.parameter_count; ++i) {
@@ -812,22 +842,6 @@ static SpirvShaderParameters create_parameters(spv::Builder &b, const SceGxmProg
         case SCE_GXM_PARAMETER_CATEGORY_AUXILIARY_SURFACE: {
             assert(parameter.component_count == 0);
             LOG_CRITICAL("auxiliary_surface used in shader");
-            break;
-        }
-        case SCE_GXM_PARAMETER_CATEGORY_UNIFORM_BUFFER: {
-            const int buffer_size = match_uniform_buffer_with_buffer_size(program, parameter, buffers);
-
-            // Search for the buffer from analyzed list
-            if (buffer_size != -1) {
-                const int base = gxp::get_uniform_buffer_base(program, parameter);
-
-                spv::Id block = create_uniform_block(b, features, (parameter.resource_index + 1) % SCE_GXM_REAL_MAX_UNIFORM_BUFFER,
-                    buffer_size, !program.is_fragment());
-
-                // We found it. Make things
-                spv_params.buffers.emplace(base, block);
-            }
-
             break;
         }
         default: {

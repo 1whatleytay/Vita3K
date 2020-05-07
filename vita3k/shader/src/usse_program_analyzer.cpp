@@ -106,7 +106,7 @@ bool is_buffer_fetch_or_store(const std::uint64_t inst, int &base, int &cursor, 
 }
 
 int match_uniform_buffer_with_buffer_size(const SceGxmProgram &program, const SceGxmProgramParameter &parameter, const shader::usse::UniformBufferMap &buffers) {
-    assert(parameter.component_count == 0 && parameter.category == SCE_GXM_PARAMETER_CATEGORY_UNIFORM_BUFFER);
+    //assert(parameter.component_count == 0 && parameter.category == SCE_GXM_PARAMETER_CATEGORY_UNIFORM_BUFFER);
 
     // Determine base value
     int base = gxp::get_uniform_buffer_base(program, parameter);
