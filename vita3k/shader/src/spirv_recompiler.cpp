@@ -748,34 +748,45 @@ static SpirvShaderParameters create_parameters(spv::Builder &b, const SceGxmProg
         buffer = nullptr;
     }
 
-	for (size_t i = 0; i < program.uniform_buffer_count; ++i) {
-        const SceGxmProgramParameter &parameter = gxp_parameters[i];
-        const int buffer_size = match_uniform_buffer_with_buffer_size(program, parameter, buffers);
+    // move into load buffers function now?
+    const auto *buffer_info = reinterpret_cast<const SceGxmUniformBufferInfo *>(
+        reinterpret_cast<const std::uint8_t *>(&program.uniform_buffer_offset) + program.uniform_buffer_offset);
 
-		if (buffer_size != -1) {
-            const int base = gxp::get_uniform_buffer_base(program, parameter);
+    auto *buffer_container = gxp::get_container_by_index(program, 19);
+    uint32_t buffer_base = buffer_container ? buffer_container->base_sa_offset : 0;
 
-            spv::Id block = create_uniform_block(b, features, 0,
-                buffer_size, !program.is_fragment());
+    for (size_t i = 0; i < program.uniform_buffer_count; ++i) {
+        //const SceGxmProgramParameter &parameter = gxp_parameters[i];
+        const SceGxmUniformBufferInfo *buffer = &buffer_info[i];
+        //const SceGxmProgramParameter *parameter = nullptr;
 
-            // We found it. Make things
-            spv_params.buffers.emplace(base, block);
+        //for (uint32_t a = 0; a < program.parameter_count; a++) {
+        //    if (gxp_parameters[a].resource_index == buffer->reside_buffer) {
+        //        parameter = &gxp_parameters[a];
+        //        break;
+        //    }
+        //}
+
+        uint32_t this_buffer_base = buffer_base + buffer->base_offset;
+
+        auto &buffer_info = buffers.find(this_buffer_base);
+        if (buffer_info == buffers.end()) {
+            LOG_WARN("Cannot find buffer at index {} and base {}, skipping.", i, this_buffer_base);
+            continue;
         }
 
-		if (!program.parameter_count == 0) {
-            for (size_t i = 0; i < program.parameter_count; ++i) {
-                // Search for the buffer from analyzed list
-                if (buffer_size != -1) {
-                    const int base = gxp::get_uniform_buffer_base(program, parameter);
+        uint32_t buffer_size = buffer_info->second.size;
 
-                    spv::Id block = create_uniform_block(b, features, (parameter.resource_index + 1) % SCE_GXM_REAL_MAX_UNIFORM_BUFFER,
-                        buffer_size, !program.is_fragment());
-
-                    // We found it. Make things
-                    spv_params.buffers.emplace(base, block);
-                }
-            }
+        if (buffer_size == -1) {
+            LOG_WARN("Could not analyze buffer size at index {} and base {}, skipping.", i, this_buffer_base);
+            continue;
         }
+
+        spv::Id block = create_uniform_block(b, features, (buffer->reside_buffer + 1) % SCE_GXM_REAL_MAX_UNIFORM_BUFFER,
+            buffer_size, !program.is_fragment());
+
+        // We found it. Make things
+        spv_params.buffers.emplace(this_buffer_base, block);
     }
 
     for (size_t i = 0; i < program.parameter_count; ++i) {
