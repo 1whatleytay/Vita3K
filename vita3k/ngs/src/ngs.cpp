@@ -317,18 +317,26 @@ namespace ngs {
         return true;
     }
 
-    Ptr<VoiceDefinition> get_voice_definition(State &ngs, MemState &mem, ngs::BussType type) {
+    Ptr<VoiceDefinition> create_voice_definition(State &ngs, MemState &mem, ngs::BussType type) {
         switch (type) {
-            case ngs::BussType::BUSS_ATRAC9:
-                return ngs.alloc_and_init<ngs::atrac9::VoiceDefinition>(mem);
-            case ngs::BussType::BUSS_NORMAL_PLAYER:
-                return ngs.alloc_and_init<ngs::player::VoiceDefinition>(mem);
-            case ngs::BussType::BUSS_MASTER:
-                return ngs.alloc_and_init<ngs::master::VoiceDefinition>(mem);
+        case ngs::BussType::BUSS_ATRAC9:
+            return ngs.alloc_and_init<ngs::atrac9::VoiceDefinition>(mem);
+        case ngs::BussType::BUSS_NORMAL_PLAYER:
+            return ngs.alloc_and_init<ngs::player::VoiceDefinition>(mem);
+        case ngs::BussType::BUSS_MASTER:
+            return ngs.alloc_and_init<ngs::master::VoiceDefinition>(mem);
 
-            default:
+        default:
                 LOG_WARN("Missing voice definition for Buss Type {}, using passthrough.", static_cast<uint32_t>(type));
-                return ngs.alloc_and_init<ngs::passthrough::VoiceDefinition>(mem);
+            return ngs.alloc_and_init<ngs::passthrough::VoiceDefinition>(mem);
         }
+    }
+
+    Ptr<VoiceDefinition> get_voice_definition(State &ngs, MemState &mem, ngs::BussType type) {
+        if (ngs.definitions.find(type) == ngs.definitions.end()) {
+            ngs.definitions[type] = create_voice_definition(ngs, mem, type);
+        }
+
+        return ngs.definitions[type];
     }
 }
