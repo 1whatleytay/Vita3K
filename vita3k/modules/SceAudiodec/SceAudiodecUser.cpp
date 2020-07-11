@@ -47,7 +47,7 @@ struct SceAudiodecInfoMp3 {
 struct SceAudiodecInfoAac {
     uint32_t is_adts;
     uint32_t channels;
-    uint32_t sample_ate;
+    uint32_t sample_rate;
     uint32_t is_sbr;
 };
 
@@ -81,6 +81,9 @@ struct SceAudiodecCtrl {
     Ptr<SceAudiodecInfo> info;
 };
 
+constexpr size_t NORMAL_ES_BUFFER_SIZE = KB(20);
+constexpr size_t NORMAL_PCM_BUFFER_SIZE = KB(32);
+
 EXPORT(int, sceAudiodecClearContext) {
     return UNIMPLEMENTED();
 }
@@ -107,6 +110,16 @@ EXPORT(int, sceAudiodecCreateDecoder, SceAudiodecCtrl *ctrl, SceAudiodecCodec co
         info.frames_in_super_frame = decoder->get(DecoderQuery::AT9_FRAMES_IN_SUPERFRAME);
         return 0;
     }
+    case SCE_AUDIODEC_TYPE_AAC: {
+        SceAudiodecInfoAac &info = ctrl->info.get(host.mem)->aac;
+        DecoderPtr decoder = std::make_shared<AacDecoderState>(info.sample_rate, info.channels);
+        host.kernel.decoders[handle] = decoder;
+
+        ctrl->es_size_max = NORMAL_ES_BUFFER_SIZE;
+        ctrl->pcm_size_max = NORMAL_PCM_BUFFER_SIZE;
+        // no outs :O
+
+        return 0;
     case SCE_AUDIODEC_TYPE_MP3: {
         SceAudiodecInfoMp3 &info = ctrl->info.get(host.mem)->mp3;
         DecoderPtr decoder = std::make_shared<Mp3DecoderState>(info.channels);
