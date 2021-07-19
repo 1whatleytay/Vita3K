@@ -9,6 +9,7 @@
 #include <SDL_vulkan.h>
 
 #include <fstream>
+#include <iostream>
 
 // 200000000 Nanoseconds = 0.2 seconds
 constexpr uint64_t next_image_timeout = 200000000;
@@ -86,6 +87,8 @@ static void ImGui_ImplSdlVulkan_DeletePipeline(ImGui_VulkanState &state) {
 }
 
 static bool ImGui_ImplSdlVulkan_CreatePipeline(ImGui_VulkanState &state) {
+    std::cout << "huhuhu" << std::endl;
+
     // Create GUI Renderpass
     vk::AttachmentDescription attachment_description(
         vk::AttachmentDescriptionFlags(), // No Flags
@@ -279,7 +282,7 @@ static bool ImGui_ImplSdlVulkan_CreatePipeline(ImGui_VulkanState &state) {
         vk::Pipeline(),
         0);
 
-    state.pipeline = get_renderer(state).device.createGraphicsPipeline(vk::PipelineCache(), gui_pipeline_info, nullptr);
+    state.pipeline = get_renderer(state).device.createGraphicsPipeline(vk::PipelineCache(), gui_pipeline_info, nullptr).value;
     if (!state.pipeline) {
         LOG_ERROR("Failed to create Vulkan gui pipeline.");
         return false;
@@ -520,8 +523,7 @@ IMGUI_API void ImGui_ImplSdlVulkan_RenderDrawData(ImGui_VulkanState &state) {
 
     vk::Queue present_queue = renderer::vulkan::select_queue(get_renderer(state), renderer::vulkan::CommandType::General);
     present_queue.presentKHR(present_info);
-    render_queue.waitIdle();
-    present_queue.waitIdle(); // Wait idle is probably bad for performance.
+//    present_queue.waitIdle(); // Wait idle is probably bad for performance.
 }
 
 IMGUI_API ImTextureID ImGui_ImplSdlVulkan_CreateTexture(ImGui_VulkanState &state, void *pixels, int width, int height) {
@@ -646,7 +648,7 @@ IMGUI_API ImTextureID ImGui_ImplSdlVulkan_CreateTexture(ImGui_VulkanState &state
     );
     vk::Queue submit_queue = renderer::vulkan::select_queue(get_renderer(state), renderer::vulkan::CommandType::Transfer);
     submit_queue.submit(1, &submit_info, vk::Fence());
-    submit_queue.waitIdle();
+//    submit_queue.waitIdle();
 
     renderer::vulkan::free_command_buffer(get_renderer(state), renderer::vulkan::CommandType::Transfer, transfer_buffer);
     renderer::vulkan::destroy_buffer(get_renderer(state), temp_buffer, temp_allocation);

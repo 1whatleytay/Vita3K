@@ -61,9 +61,9 @@ const char *get_surface_extension() {
 #endif
 
 const static std::vector<const char *> instance_layers = {
-#ifndef NDEBUG
-    "VK_LAYER_LUNARG_standard_validation",
-#endif
+//#ifndef NDEBUG
+//    "VK_LAYER_LUNARG_standard_validation",
+//#endif
 };
 
 const static std::vector<const char *> instance_extensions = {
@@ -227,7 +227,7 @@ bool resize_swapchain(VulkanState &state, vk::Extent2D size) {
             0, nullptr, // Unused when sharing mode is exclusive
             vk::SurfaceTransformFlagBitsKHR::eIdentity, // Transform
             vk::CompositeAlphaFlagBitsKHR::eOpaque, // Alpha
-            vk::PresentModeKHR::eFifo, // Present Mode, FIFO and Immediate are supported on MoltenVK. Would've chosen Mailbox otherwise.
+            vk::PresentModeKHR::eImmediate, // Present Mode, FIFO and Immediate are supported on MoltenVK. Would've chosen Mailbox otherwise.
             true, // Clipping
             vk::SwapchainKHR() // No old swapchain.
         );

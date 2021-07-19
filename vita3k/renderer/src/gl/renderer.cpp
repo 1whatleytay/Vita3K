@@ -216,9 +216,10 @@ bool create(WindowPtr &window, std::unique_ptr<State> &state) {
         return false;
 
     // Try adaptive vsync first, falling back to regular vsync.
-    if (SDL_GL_SetSwapInterval(-1) < 0) {
-        SDL_GL_SetSwapInterval(1);
-    }
+    SDL_GL_SetSwapInterval(0);
+//    if (SDL_GL_SetSwapInterval(-1) < 0) {
+//        SDL_GL_SetSwapInterval(1);
+//    }
     LOG_INFO("Swap interval = {}", SDL_GL_GetSwapInterval());
 
     gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress);

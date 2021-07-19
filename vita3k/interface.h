@@ -33,7 +33,7 @@ inline void delete_zip(mz_zip_archive *zip) {
     delete zip;
 }
 
-bool handle_events(HostState &host, GuiState &gui);
+bool handle_events(HostState &host, GuiState &gui, bool &print_asap);
 
 ExitCode load_app(Ptr<const void> &entry_point, HostState &host, GuiState &gui, const std::wstring &path, app::AppRunType run_type);
 ExitCode run_app(HostState &host, Ptr<const void> &entry_point);

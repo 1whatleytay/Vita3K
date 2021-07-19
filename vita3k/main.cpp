@@ -37,7 +37,10 @@
 #endif
 
 #include <SDL.h>
+
+#include <chrono>
 #include <cstdlib>
+#include <iostream>
 
 int main(int argc, char *argv[]) {
     Root root_paths;
@@ -115,9 +118,18 @@ int main(int argc, char *argv[]) {
 
     auto discord_rich_presence_old = host.cfg.discord_rich_presence;
 
+    auto now = []() { return std::chrono::high_resolution_clock::now().time_since_epoch().count(); };
+
+    uint64_t frames = 0;
+    uint64_t start = now();
+
     // Application not provided via argument, show game selector
     while (run_type == app::AppRunType::Unknown) {
-        if (handle_events(host, gui)) {
+        frames++;
+
+        bool print_asap = false;
+
+        if (handle_events(host, gui, print_asap)) {
             gui::draw_begin(gui, host);
 
 #if DISCORD_RPC
@@ -127,6 +139,11 @@ int main(int argc, char *argv[]) {
             gui::draw_game_selector(gui, host);
 
             gui::draw_end(gui, host.window.get());
+
+            if (print_asap) {
+                uint64_t delta = now() - start;
+                std::cout << "X: " << frames << " frames in " << delta << " ns, " << delta / frames << " t/f." << std::endl;
+            }
         } else {
             return QuitRequested;
         }
@@ -151,7 +168,9 @@ int main(int argc, char *argv[]) {
     if (!gl_renderer.init(host.base_path))
         return RendererInitFailed;
 
-    while (handle_events(host, gui)) {
+    bool y = false;
+
+    while (handle_events(host, gui, y)) {
         // Driver acto!
         renderer::process_batches(*host.renderer.get(), host.renderer->features, host.mem, host.cfg, host.base_path.c_str(),
             host.io.title_id.c_str());
